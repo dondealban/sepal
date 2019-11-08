@@ -5,5 +5,14 @@ echo
 echo "***********************"
 echo "*** Installing Java ***"
 echo "***********************"
-echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
-apt-get install -y oracle-java8-installer
+export SDKMAN_DIR=/usr/local/lib/sdkman
+curl -s get.sdkman.io | bash
+source "$SDKMAN_DIR/bin/sdkman-init.sh"
+yes | sdk install java 12.0.2.hs-adpt
+sdk install groovy
+
+source "$SDKMAN_DIR/bin/sdkman-init.sh"
+ln -s `which java` /usr/local/bin/java
+ln -s `which groovy` /usr/local/bin/groovy
+
+echo 'source "$SDKMAN_DIR/bin/sdkman-init.sh"' >> /etc/profile

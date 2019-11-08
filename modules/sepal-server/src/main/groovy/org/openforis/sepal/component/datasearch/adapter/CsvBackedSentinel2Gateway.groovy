@@ -10,8 +10,6 @@ import org.slf4j.LoggerFactory
 
 import java.text.SimpleDateFormat
 
-import static org.openforis.sepal.component.datasearch.api.DataSet.SENTINEL2
-
 class CsvBackedSentinel2Gateway implements DataSetMetadataGateway {
     private static final Logger LOG = LoggerFactory.getLogger(this)
     public static final String CSV_FILE_NAME = 'sentinel2.csv'
@@ -63,9 +61,9 @@ class CsvBackedSentinel2Gateway implements DataSetMetadataGateway {
                 def coverage = size ? size / (size - size * cloudCover / 100d) : cloudCover
                 return new SceneMetaData(
                         id: id,
-                        dataSet: SENTINEL2,
+                        source: 'SENTINEL_2',
                         sceneAreaId: data.MGRS_TILE,
-                        sensorId: sensor,
+                        dataSet: sensor,
                         acquisitionDate: parseDate(data.SENSING_TIME),
                         cloudCover: data.CLOUD_COVER.toDouble(),
                         browseUrl: browseUrl(awsPath),
@@ -87,11 +85,12 @@ class CsvBackedSentinel2Gateway implements DataSetMetadataGateway {
             date1 = data.PRODUCT_ID.substring(47, 47 + 15)
             date2 = data.GRANULE_ID.substring(25, 25 + 15)
             tile = data.GRANULE_ID.substring(49, 49 + 6)
-        } else {
+        } else if (data.GRANULE_ID.length() == 34){
             date1 = data.PRODUCT_ID.substring(11, 11 + 15)
-            date2 = data.PRODUCT_ID.substring(45)
+            date2 = data.GRANULE_ID.substring(19, 19 + 15)
             tile = data.GRANULE_ID.substring(4, 4 + 6)
-        }
+        } else
+            throw IllegalStateException("Unexpected GRANULE_ID length: " + data.GRANULE_ID)
         def id = "${date1}_${date2}_${tile}"
         return id
     }
@@ -111,7 +110,7 @@ class CsvBackedSentinel2Gateway implements DataSetMetadataGateway {
     }
 
     private URI browseUrl(awsPath) {
-        def base = 'http://sentinel-s2-l1c.s3.amazonaws.com/tiles'
+        def base = 'https://roda.sentinel-hub.com/sentinel-s2-l1c/tiles'
         return URI.create("$base/$awsPath/preview.jpg")
     }
 
@@ -138,6 +137,6 @@ class CsvBackedSentinel2Gateway implements DataSetMetadataGateway {
     }
 
     private static enum Sensor {
-        SENTINEL2A
+        SENTINEL_2
     }
 }

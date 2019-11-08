@@ -1,13 +1,13 @@
 package org.openforis.sepal.component.datasearch.api
 
-import org.openforis.sepal.util.annotation.ImmutableData
+import groovy.transform.Immutable
 
-@ImmutableData
+@Immutable
 class SceneMetaData {
     String id
-    DataSet dataSet
+    String source
     String sceneAreaId
-    String sensorId
+    String dataSet
     Date acquisitionDate
     double cloudCover // In percentage
     double coverage // In percentage

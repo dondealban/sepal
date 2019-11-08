@@ -1,0 +1,27 @@
+.options {
+    z-index: 2;
+    border: 1px solid #333;
+    scrollbar-width: none; /* Hides scrollbars in Firefox */
+}
+
+.options::-webkit-scrollbar {
+    display: none !important;
+}
+
+.options ul {
+    --scrollable-container-height: 0;
+    margin: calc(var(--scrollable-container-height) / 2 * 1px) 0;
+    padding: 0;
+    list-style: none;
+}
+
+.options .group {
+    border: 0;
+    padding: .35rem .75rem;
+    height: 30px;
+    font-size: .8rem;
+    font-weight: 800;
+    color: gray;
+    text-transform: uppercase;
+    border-bottom: 1px solid #333;
+}

@@ -1,0 +1,51 @@
+/*
+  WARNING: Very fragile
+*/
+
+.panel {
+    max-width: fit-content !important;
+}
+
+.thumbnail {
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    overflow: hidden;
+}
+
+/* 
+    [HACK]
+    Image is needed here for constraining dimensions, but already 
+    displayed as a background (to get autoscaling), thus hidden.
+*/
+.thumbnail > * {
+    width: 100%;
+    opacity: 0;
+}
+
+.details {
+    margin-top: 1rem;
+    font-size: .9rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, 10rem);
+    grid-template-rows: repeat(auto-fit, 3rem);
+    grid-row-gap: 1rem;
+    grid-column-gap: 2rem;
+    justify-content: center;
+}
+
+.label {
+    font-size: .75rem;
+    margin: 0;
+    color: #aaa;
+}
+
+.label i {
+    width: 1.5rem;
+    display: inline-block;
+}
+
+.value {
+    margin-left: 1.5rem;
+    font-size: .9rem;
+}

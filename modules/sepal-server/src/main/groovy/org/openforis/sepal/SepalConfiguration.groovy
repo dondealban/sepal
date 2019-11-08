@@ -64,14 +64,6 @@ class SepalConfiguration {
         Integer.parseInt(getValue(WEBAPP_PORT_PARAMETER))
     }
 
-    String getGateOnePublicKey() {
-        getValue('gateone.publicKey')
-    }
-
-    String getGateOnePrivateKey() {
-        getValue('gateone.privateKey')
-    }
-
     String getSepalUsername() {
         getValue('sepalUsername')
     }
@@ -100,7 +92,7 @@ class SepalConfiguration {
         [
                 'rstudio'    : 8787,
                 'shiny'      : 3838,
-                'geo-web-viz': 5678
+                'jupyter'    : 8888
         ]
     }
 

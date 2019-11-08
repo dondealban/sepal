@@ -1,10 +1,9 @@
 package org.openforis.sepal.component.workerinstance.event
 
-import org.openforis.sepal.component.workerinstance.api.WorkerInstance
+import groovy.transform.Immutable
 import org.openforis.sepal.event.Event
-import org.openforis.sepal.util.annotation.ImmutableData
 
-@ImmutableData(knownImmutableClasses = [Exception])
+@Immutable(knownImmutables = ['exception'])
 class FailedToRequestInstance implements Event {
     String workerType
     String instanceType

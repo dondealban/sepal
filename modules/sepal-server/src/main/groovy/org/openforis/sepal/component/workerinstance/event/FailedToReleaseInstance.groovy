@@ -1,9 +1,9 @@
 package org.openforis.sepal.component.workerinstance.event
 
+import groovy.transform.Immutable
 import org.openforis.sepal.event.Event
-import org.openforis.sepal.util.annotation.ImmutableData
 
-@ImmutableData(knownImmutableClasses = [Exception])
+@Immutable(knownImmutables = ['exception'])
 class FailedToReleaseInstance implements Event {
     String instanceId
     Exception exception

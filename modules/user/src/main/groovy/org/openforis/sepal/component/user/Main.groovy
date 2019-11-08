@@ -1,10 +1,14 @@
 package org.openforis.sepal.component.user
 
+import groovy.transform.Canonical
+import groovymvc.security.UsernamePasswordVerifier
+import org.openforis.sepal.component.user.adapter.LdapUsernamePasswordVerifier
+import org.openforis.sepal.component.user.adapter.TerminalBackedExternalUserDataGateway
+import org.openforis.sepal.component.user.api.ExternalUserDataGateway
 import org.openforis.sepal.endpoint.Endpoints
 import org.openforis.sepal.endpoint.Server
 import org.openforis.sepal.security.PathRestrictionsFactory
 import org.openforis.sepal.util.Config
-import org.openforis.sepal.util.annotation.Data
 import org.openforis.sepal.util.lifecycle.Lifecycle
 import org.openforis.sepal.util.lifecycle.Stoppable
 import org.slf4j.Logger
@@ -14,27 +18,41 @@ class Main extends AbstractMain {
     private static final Logger LOG = LoggerFactory.getLogger(this)
 
     Main() {
-        def serverConfig = new ServerConfig()
-        def userComponent = start UserComponent.create(serverConfig)
-        def endpoints = new Endpoints(
+        try {
+            def serverConfig = new ServerConfig()
+            def userComponent = start UserComponent.create(
+                createUsernamePasswordVerifier(serverConfig),
+                createExternalUserDataGateway(),
+                serverConfig
+            )
+            def endpoints = new Endpoints(
                 PathRestrictionsFactory.create(),
                 userComponent
-        )
-        start new Server(serverConfig.port, endpoints)
-    }
-
-    static void main(String[] args) {
-        try {
-            def instance = new Main()
-            addShutdownHook { instance.stop() }
+            )
+            start new Server(serverConfig.port, endpoints)
+            addShutdownHook { stop() }
         } catch (Exception e) {
             LOG.error('Failed to start user module', e)
             System.exit(1)
         }
     }
+
+    UsernamePasswordVerifier createUsernamePasswordVerifier(ServerConfig serverConfig) {
+        new LdapUsernamePasswordVerifier(serverConfig.ldapHost)
+    }
+
+    ExternalUserDataGateway createExternalUserDataGateway() {
+        new TerminalBackedExternalUserDataGateway()
+    }
+
+    static void main(String[] args) {
+        new Main()
+    }
+
+
 }
 
-@Data
+@Canonical
 class ServerConfig {
     final int port
     final String host

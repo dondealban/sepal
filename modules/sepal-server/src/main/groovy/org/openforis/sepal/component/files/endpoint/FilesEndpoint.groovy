@@ -3,9 +3,8 @@ package org.openforis.sepal.component.files.endpoint
 import groovymvc.Controller
 import org.openforis.sepal.component.Component
 import org.openforis.sepal.component.files.api.InvalidPath
-import org.openforis.sepal.component.files.command.DeleteFile
-import org.openforis.sepal.component.files.query.ListFiles
-import org.openforis.sepal.component.files.query.ReadFile
+import org.openforis.sepal.component.files.command.*
+import org.openforis.sepal.component.files.query.*
 import org.openforis.sepal.query.QueryFailed
 
 import static groovy.json.JsonOutput.toJson
@@ -20,36 +19,42 @@ class FilesEndpoint {
     void registerWith(Controller controller) {
         controller.with {
 
+            def queryFiles = {
+                requestContext.with {
+                    response.contentType = 'application/json'
+                    def path = params.required('path', String)
+                    def clientDirTree = jsonBody(Map)
+                    def files = component.submit(
+                        new QueryFiles(
+                            path: path,
+                            clientDirTree: clientDirTree,
+                            username: requestContext.currentUser.username
+                        )
+                    )
+                    send toJson(files)
+                }
+            }
+
             error(QueryFailed, InvalidPath) {
                 response?.status = 400
                 response?.setContentType('application/json')
                 send(toJson([message: it.message]))
             }
 
-            get('/user/files') {
-                response.contentType = 'application/json'
-                def path = params.required('path', String)
-                def files = component.submit(
-                        new ListFiles(username: currentUser.username, path: path)
-                )
-                def result = files.collect {
-                    def map = [name: it.name, isDirectory: it.directory]
-                    if (!map.isDirectory)
-                        map.size = it.size()
-                    return map
+            post('/files') {
+                queryFiles()
+            }
+
+            post('/files/delete') {
+                jsonBody(List).forEach {
+                    component.submit(
+                            new DeleteFile(username: currentUser.username, path: it)
+                    )
                 }
-                send toJson(result)
+                response.status = 204
             }
 
-            delete('/user/files/{path}') {
-                def path = '/' + URLDecoder.decode(params.required('path', String), "UTF-8")
-                component.submit(
-                        new DeleteFile(username: currentUser.username, path: path)
-                )
-                send toJson([status: 'success'])
-            }
-
-            get('/user/files/download') {
+            get('/files/download') {
                 def path = params.required('path', String)
                 def fileStream = component.submit(
                         new ReadFile(username: currentUser.username, path: path)
@@ -62,6 +67,19 @@ class FilesEndpoint {
                 response.outputStream << fileStream
                 response.outputStream.flush()
             }
+
+            post('/files/archivable/{path}') {
+                def path = URLDecoder.decode(params.required('path', String), "UTF-8")
+                component.submit(new SetArchivable(username: currentUser.username, path: path, archivable: true))
+                response.status = 204
+            }
+
+            post('/files/non-archivable/{path}') {
+                def path = URLDecoder.decode(params.required('path', String), "UTF-8")
+                component.submit(new SetArchivable(username: currentUser.username, path: path, archivable: false))
+                response.status = 204
+            }
+
         }
     }
 }

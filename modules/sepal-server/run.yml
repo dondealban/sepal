@@ -2,6 +2,8 @@
 - file: path="/data/sepal" state=directory
 - file: path="/data/sepal/ldap" state=directory
 - file: path="/data/sepal/shiny" state=directory
+- file: path="/data/sepal/shared" state=directory
+- file: path="/data/sepal/shared" state=directory
 - file: path="/data/sepal/shiny/apps" state=directory
 - file: path="/data/sepal/shiny/library" state=directory
 - file: path="/data/sepal/certificates" state=directory
@@ -16,14 +18,16 @@
     state: "{{ state }}"
     restart_policy: "{{ restart_policy }}"
     network_mode: "{{ network_mode }}"
+    sysctls:
+      net.ipv4.tcp_keepalive_time: 10
+      net.ipv4.tcp_keepalive_intvl: 10
+      net.ipv4.tcp_keepalive_probes: 6
     log_driver: syslog
     log_opt:
       syslog-address: "{{ syslog_address }}"
       tag: "sepal"
-    links:
-    - "mysql:mysql"
-    - "google-earth-engine:google-earth-engine"
-    - "user:user"
+    networks:
+      - name: 'sepal'
     volumes:
     - "/data/sepal:/data"
     env:
@@ -43,3 +47,4 @@
       EE_ACCOUNT_SEPAL_ENV: "{{ google_earth_engine_account }}"
       EE_PRIVATE_KEY_SEPAL_ENV: "{{ google_earth_engine_private_key }}"
       GOOGLE_MAPS_API_KEY_SEPAL_ENV: "{{ google_maps_api_key }}"
+      SYSLOG_HOST_SEPAL_ENV: "{{ syslog_host }}"

@@ -31,8 +31,8 @@ class GoogleOAuthException extends RuntimeException {
 class RestBackedGoogleOAuthClient implements GoogleOAuthClient {
     public static final SCOPE = '' +
             'https://www.googleapis.com/auth/earthengine ' +
-            'https://www.googleapis.com/auth/devstorage.full_control ' +
-            'https://www.googleapis.com/auth/drive'
+            'https://www.googleapis.com/auth/drive ' +
+            'https://www.googleapis.com/auth/fusiontables'
     private final String sepalHost
     private final String clientId
     private final String clientSecret
@@ -44,7 +44,7 @@ class RestBackedGoogleOAuthClient implements GoogleOAuthClient {
     }
 
     URI redirectUrl(String destinationUrl) {
-        def redirectUrl = "https://$sepalHost/user/google/access-request-callback"
+        def redirectUrl = "https://$sepalHost/api/user/google/access-request-callback"
         def baseUrl = 'https://accounts.google.com/o/oauth2/v2/auth'
         def params = [
                 scope                 : SCOPE,
@@ -69,7 +69,7 @@ class RestBackedGoogleOAuthClient implements GoogleOAuthClient {
                         code         : authorizationCode,
                         client_id    : clientId,
                         client_secret: clientSecret,
-                        redirect_uri : "https://$sepalHost/user/google/access-request-callback",
+                        redirect_uri : "https://$sepalHost/api/user/google/access-request-callback",
                         grant_type   : 'authorization_code'
                 ]
         )
@@ -88,7 +88,7 @@ class RestBackedGoogleOAuthClient implements GoogleOAuthClient {
                         refresh_token: tokens.refreshToken,
                         client_id    : clientId,
                         client_secret: clientSecret,
-                        redirect_uri : "https://$sepalHost/user/google/access-request-callback",
+                        redirect_uri : "https://$sepalHost/api/user/google/access-request-callback",
                         grant_type   : 'refresh_token'
                 ]
         )

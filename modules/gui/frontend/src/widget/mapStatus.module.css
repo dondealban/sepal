@@ -1,0 +1,32 @@
+.container {
+    position: absolute;
+    top: calc(var(--toolbar-clearance) + 2rem);
+    left: calc(var(--menu-clearance) + .5rem);
+    right: calc(var(--toolbar-clearance) + .5rem);
+    display:flex;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+}
+.status {
+    pointer-events: all;
+    color: #ccc;
+    background-color: rgba(0, 0, 0, 0.6);
+    font-size: .9rem;
+    font-family: var(--header-font-family);
+    padding: .5rem 1rem;
+    border-radius: .5rem;
+}
+
+.status i {
+    margin-right: 0.5rem;
+}
+
+.status > * {
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.error {
+    margin-left: 0.5rem;
+    color: #e81351;
+}

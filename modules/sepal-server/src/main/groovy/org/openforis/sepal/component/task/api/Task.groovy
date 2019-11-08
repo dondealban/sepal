@@ -1,13 +1,15 @@
 package org.openforis.sepal.component.task.api
 
-import org.openforis.sepal.util.annotation.ImmutableData
+import groovy.json.JsonOutput
+import groovy.transform.Immutable
 
 import static org.openforis.sepal.component.task.api.Task.State.*
 
-@ImmutableData
+@Immutable
 class Task {
     String id
     State state
+    String recipeId
     String username
     String operation
     Map params
@@ -58,15 +60,16 @@ class Task {
 
     Task update(State state, String statusDescription) {
         new Task(
-                id: id,
-                state: state,
-                username: username,
-                operation: operation,
-                params: params,
-                sessionId: sessionId,
-                statusDescription: statusDescription ?: state.description,
-                creationTime: creationTime,
-                updateTime: updateTime
+            id: id,
+            state: state,
+            recipeId: recipeId,
+            username: username,
+            operation: operation,
+            params: params,
+            sessionId: sessionId,
+            statusDescription: statusDescription ?: state.description,
+            creationTime: creationTime,
+            updateTime: updateTime
         )
     }
 
@@ -74,24 +77,22 @@ class Task {
         switch (operation) {
             case 'landsat-scene-download':
                 return "Retrieving ${params.sceneIds?.size()} Landsat scenes"
-            case 'google-earth-engine-download':
-                return "Retrieving ${params?.name}.tif from Google Earth Engine"
             default:
-                return operation
+                return params.title ?: operation
         }
     }
 
     enum State {
-        PENDING('Initializing...'),
-        ACTIVE('Executing...'),
-        COMPLETED('Completed!'),
-        CANCELED('Canceled'),
-        FAILED('Failed')
+        PENDING([defaultMessage: 'Initializing...', messageKey: 'tasks.status.initializing', messageArgs: [:]]),
+        ACTIVE([defaultMessage: 'Executing...', messageKey: 'tasks.status.executing', messageArgs: [:]]),
+        COMPLETED([defaultMessage: 'Completed!', messageKey: 'tasks.status.completed', messageArgs: [:]]),
+        CANCELED([defaultMessage: 'Canceled.', messageKey: 'tasks.status.canceled', messageArgs: [:]]),
+        FAILED([defaultMessage: 'Failed: Internal Error', messageKey: 'tasks.status.failed', messageArgs: [error: 'Internal Error']])
 
         final String description
 
-        State(String description) {
-            this.description = description
+        State(Map<String, String> description) {
+            this.description = JsonOutput.toJson(description)
         }
     }
 }

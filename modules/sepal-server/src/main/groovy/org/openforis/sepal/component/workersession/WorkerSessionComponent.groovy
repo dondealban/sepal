@@ -4,9 +4,8 @@ import groovymvc.Controller
 import org.openforis.sepal.component.DataSourceBackedComponent
 import org.openforis.sepal.component.budget.BudgetComponent
 import org.openforis.sepal.component.hostingservice.HostingServiceAdapter
+import org.openforis.sepal.component.hostingservice.api.InstanceType
 import org.openforis.sepal.component.workerinstance.WorkerInstanceComponent
-import org.openforis.sepal.component.workerinstance.command.CloseSessionOnInstance
-import org.openforis.sepal.component.workerinstance.command.CloseSessionOnInstanceHandler
 import org.openforis.sepal.component.workersession.adapter.BudgetComponentAdapter
 import org.openforis.sepal.component.workersession.adapter.InstanceComponentAdapter
 import org.openforis.sepal.component.workersession.adapter.JdbcWorkerSessionRepository
@@ -14,7 +13,6 @@ import org.openforis.sepal.component.workersession.adapter.RestGoogleOAuthGatewa
 import org.openforis.sepal.component.workersession.api.BudgetManager
 import org.openforis.sepal.component.workersession.api.GoogleOAuthGateway
 import org.openforis.sepal.component.workersession.api.InstanceManager
-import org.openforis.sepal.component.hostingservice.api.InstanceType
 import org.openforis.sepal.component.workersession.command.*
 import org.openforis.sepal.component.workersession.endpoint.SandboxSessionEndpoint
 import org.openforis.sepal.component.workersession.query.*
@@ -33,30 +31,32 @@ class WorkerSessionComponent extends DataSourceBackedComponent implements Endpoi
     private final List<InstanceType> instanceTypes
 
     static WorkerSessionComponent create(
-            BudgetComponent budgetComponent,
-            WorkerInstanceComponent workerInstanceComponent,
-            HostingServiceAdapter hostingServiceAdapter,
-            SqlConnectionManager connectionManager) {
+        BudgetComponent budgetComponent,
+        WorkerInstanceComponent workerInstanceComponent,
+        HostingServiceAdapter hostingServiceAdapter,
+        SqlConnectionManager connectionManager) {
         def config = new WorkerSessionConfig()
         new WorkerSessionComponent(
-                connectionManager,
-                new AsynchronousEventDispatcher(),
-                new BudgetComponentAdapter(budgetComponent),
-                new InstanceComponentAdapter(hostingServiceAdapter.instanceTypes, workerInstanceComponent),
-                new RestGoogleOAuthGateway(config.googleOAuthEndpoint),
-                hostingServiceAdapter.instanceTypes,
-                new SystemClock()
+            connectionManager,
+            new AsynchronousEventDispatcher(),
+            new BudgetComponentAdapter(budgetComponent),
+            new InstanceComponentAdapter(hostingServiceAdapter.instanceTypes, workerInstanceComponent),
+            new RestGoogleOAuthGateway(config.googleOAuthEndpoint),
+            hostingServiceAdapter.instanceTypes,
+            new SystemClock(),
+            new File('/data/home')
         )
     }
 
     WorkerSessionComponent(
-            SqlConnectionManager connectionManager,
-            HandlerRegistryEventDispatcher eventDispatcher,
-            BudgetManager budgetManager,
-            InstanceManager instanceManager,
-            GoogleOAuthGateway googleOAuthGateway,
-            List<InstanceType> instanceTypes,
-            Clock clock) {
+        SqlConnectionManager connectionManager,
+        HandlerRegistryEventDispatcher eventDispatcher,
+        BudgetManager budgetManager,
+        InstanceManager instanceManager,
+        GoogleOAuthGateway googleOAuthGateway,
+        List<InstanceType> instanceTypes,
+        Clock clock,
+        File homeDir) {
         super(connectionManager, eventDispatcher)
         this.instanceTypes = instanceTypes
         this.clock = clock
@@ -72,9 +72,12 @@ class WorkerSessionComponent extends DataSourceBackedComponent implements Endpoi
         command(CloseSessionOnInstance, new CloseSessionOnInstanceHandler(sessionRepository, closeSessionHandler))
         command(CloseSessionsWithoutInstance, new CloseSessionsWithoutInstanceHandler(sessionRepository, instanceManager, eventDispatcher))
         command(ReleaseUnusedInstances, new ReleaseUnusedInstancesHandler(sessionRepository, instanceManager))
-        command(Heartbeat, new HeartbeatHandler(sessionRepository, googleOAuthGateway))
+        command(Heartbeat, new HeartbeatHandler(sessionRepository))
+        command(SetEarliestTimeoutTime, new SetEarliestTimeoutTimeHandler(sessionRepository))
         command(CloseSessionsForUsersExceedingBudget,
-                new CloseSessionsForUsersExceedingBudgetHandler(budgetManager, closeUserSessionsHandler))
+            new CloseSessionsForUsersExceedingBudgetHandler(budgetManager, closeUserSessionsHandler))
+        command(RemoveOrphanedTmpDirs, new RemoveOrphanedTmpDirsHandler(homeDir, sessionRepository))
+        command(RefreshGoogleTokens, new RefreshGoogleTokensHandler(sessionRepository, googleOAuthGateway))
 
         query(UserWorkerSessions, new UserWorkerSessionsHandler(sessionRepository))
         query(FindSessionById, new FindSessionByIdHandler(sessionRepository))
@@ -93,12 +96,18 @@ class WorkerSessionComponent extends DataSourceBackedComponent implements Endpoi
 
     void onStart() {
         schedule(1, MINUTES,
-                new CloseTimedOutSessions(),
-                new CloseSessionsWithoutInstance(),
-                new ReleaseUnusedInstances(5, MINUTES)
+            new CloseTimedOutSessions(),
+            new CloseSessionsWithoutInstance(),
+            new ReleaseUnusedInstances(5, MINUTES)
         )
-        schedule(10, MINUTES,
-                new CloseSessionsForUsersExceedingBudget()
+        schedule(11, MINUTES,
+            new CloseSessionsForUsersExceedingBudget()
+        )
+        schedule(12, MINUTES,
+            new RemoveOrphanedTmpDirs()
+        )
+        schedule(5, MINUTES,
+            new RefreshGoogleTokens()
         )
     }
 

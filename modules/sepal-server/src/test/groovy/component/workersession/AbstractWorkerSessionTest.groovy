@@ -3,9 +3,11 @@ package component.workersession
 import fake.Database
 import fake.FakeClock
 import org.openforis.sepal.component.hostingservice.api.InstanceType
-import org.openforis.sepal.component.workerinstance.command.CloseSessionOnInstance
 import org.openforis.sepal.component.workersession.WorkerSessionComponent
-import org.openforis.sepal.component.workersession.api.*
+import org.openforis.sepal.component.workersession.api.Spending
+import org.openforis.sepal.component.workersession.api.Timeout
+import org.openforis.sepal.component.workersession.api.UserSessionReport
+import org.openforis.sepal.component.workersession.api.WorkerSession
 import org.openforis.sepal.component.workersession.api.WorkerSession.State
 import org.openforis.sepal.component.workersession.command.*
 import org.openforis.sepal.component.workersession.query.FindPendingOrActiveSession
@@ -20,6 +22,7 @@ import spock.lang.Specification
 import java.util.concurrent.TimeUnit
 
 abstract class AbstractWorkerSessionTest extends Specification {
+    final workDir = File.createTempDir()
     final testWorkerType = 'test-worker-type'
     final testInstanceType = 'test-instance-type'
     final testUsername = 'test-user'
@@ -38,7 +41,9 @@ abstract class AbstractWorkerSessionTest extends Specification {
             instanceManager,
             googleOAuthGateway,
             [new InstanceType(id: testInstanceType, name: testInstanceType, hourlyCost: 123d, idleCount: 1)],
-            clock)
+            clock,
+            workDir
+    )
 
     final events = [] as List<Event>
 
@@ -47,11 +52,18 @@ abstract class AbstractWorkerSessionTest extends Specification {
         component.on(Event) { events << it }
     }
 
+    def cleanup() {
+        workDir.deleteDir()
+    }
+
     final WorkerSession requestSession(Map args = [:]) {
-        component.submit(new RequestSession(
+        def session = component.submit(new RequestSession(
                 username: username(args),
                 workerType: args.workerType ?: testWorkerType,
                 instanceType: testInstanceType))
+        if (args.earliestTimeoutTime)
+            setEarliestTimeoutTime(session, args.earliestTimeoutTime)
+        return session
     }
 
     final WorkerSession pendingSession(Map args = [:]) {
@@ -84,6 +96,10 @@ abstract class AbstractWorkerSessionTest extends Specification {
         return findSessionById(session.id)
     }
 
+    final void refreshGoogleTokens() {
+        component.submit(new RefreshGoogleTokens())
+    }
+
     final void closeSession(WorkerSession session, Map args = [:]) {
         component.submit(new CloseSession(
                 username: username(args),
@@ -108,6 +124,10 @@ abstract class AbstractWorkerSessionTest extends Specification {
 
     final void sendHeartbeat(WorkerSession session, Map args = [:]) {
         component.submit(new Heartbeat(username: username(args), sessionId: session.id))
+    }
+
+    final void setEarliestTimeoutTime(WorkerSession session, Date time, Map args = [:]) {
+        component.submit(new SetEarliestTimeoutTime(username: username(args), sessionId: session.id, time: time))
     }
 
     final WorkerSession findSessionById(String sessionId) {
@@ -145,6 +165,10 @@ abstract class AbstractWorkerSessionTest extends Specification {
 
     final Spending setUserSpending(Spending spending, Map args = [:]) {
         budgetManager.setUserSpending(username(args), spending)
+    }
+
+    final void removeOrphanedTmpDirs() {
+        component.submit(new RemoveOrphanedTmpDirs())
     }
 
 

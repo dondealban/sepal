@@ -37,26 +37,3 @@ printf '%s\n' \
 printf '%s\n' \
     "PS1='${debian_chroot:+($debian_chroot)}\u@sepal:\w\$ '" \
     >> /etc/bash.bashrc
-
-echo
-echo "*********************************"
-echo "*** Installing RStudio Server ***"
-echo "*********************************"
-# Latest working before this bug: https://support.rstudio.com/hc/en-us/community/posts/115006512047-RStudio-Server-authentication-fails-after-update?page=1
-rstudio=rstudio-server-0.99.491-amd64.deb
-wget https://download2.rstudio.org/$rstudio
-gdebi -n $rstudio
-printf '%s\n' \
-    "server-app-armor-enabled=0" \
-    >> /etc/rstudio/rserver.conf
-rm -f $rstudio
-
-echo
-echo "*******************************"
-echo "*** Installing Shiny Server ***"
-echo "*******************************"
-shinyServer=shiny-server-1.5.3.838-amd64.deb
-wget https://download3.rstudio.org/ubuntu-12.04/x86_64/$shinyServer
-gdebi -n $shinyServer
-chown shiny:root /usr/lib/R/library
-rm $shinyServer

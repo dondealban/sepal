@@ -1,18 +1,17 @@
 package org.openforis.sepal.component.hostingservice.aws
 
+import groovy.transform.Canonical
 import org.openforis.sepal.util.Config
-import org.openforis.sepal.util.FileSystem
-import org.openforis.sepal.util.annotation.Data
 
-@Data
+@Canonical
 class AwsConfig {
     final String region
     final String availabilityZone
     final String accessKey
     final String secretKey
-    final int sepalVersion
+    final String syslogHost
+    final String sepalVersion
     final String environment
-    final String userHomeDirTemplate
 
     AwsConfig() {
         def c = new Config('aws.properties')
@@ -20,8 +19,8 @@ class AwsConfig {
         availabilityZone = c.string('availabilityZone')
         accessKey = c.string('accessKey')
         secretKey = c.string('secretKey')
-        sepalVersion = c.integer('sepalVersion')
+        syslogHost = c.string('syslogHost')
+        sepalVersion = c.string('sepalVersion')
         environment = c.string('environment')
-        userHomeDirTemplate = c.string('userHomeDirTemplate')
     }
 }

@@ -1,15 +1,16 @@
 package org.openforis.sepal.workertype
 
+import groovy.transform.Immutable
 import org.openforis.sepal.component.workerinstance.WorkerInstanceConfig
 import org.openforis.sepal.component.workerinstance.api.WorkerInstance
-import org.openforis.sepal.util.annotation.ImmutableData
+import org.openforis.sepal.util.Terminal
 
 final class WorkerTypes {
     static final String SANDBOX = 'sandbox'
     static final String TASK_EXECUTOR = 'task-executor'
     static final Map<String, Factory> FACTORIES = [
-            (SANDBOX)      : new SandboxFactory(),
-            (TASK_EXECUTOR): new TaskExecutorFactory()
+        (SANDBOX): new SandboxFactory(),
+        (TASK_EXECUTOR): new TaskExecutorFactory()
     ]
 
     static WorkerType create(String id, WorkerInstance instance, WorkerInstanceConfig config) {
@@ -24,79 +25,89 @@ final class WorkerTypes {
             def taskExecutorPublishedPorts = [(1026): 1026]
             def username = instance.reservation.username
             def userHome = "$config.userHomes/${username}" as String
+            def userTmp = tempDir(instance, config)
+            def ldapPem = '/data/sepal/certificates/ldap-ca.crt.pem'
             def eePrivateKey = config.googleEarthEnginePrivateKey.replaceAll(
-                    '\n', '-----LINE BREAK-----')
+                '\n', '-----LINE BREAK-----')
             def googleEarthEngine = new Image(
-                    name: 'google-earth-engine',
-                    exposedPorts: [5002],
-                    volumes: [
-                            (userHome)                                : "/home/${username}",
-                            '/data/sepal/certificates/ldap-ca.crt.pem': "/etc/ldap/certificates/ldap-ca.crt.pem"],
-                    runCommand: [
-                            '/script/init_download_container.sh',
-                            username],
-                    environment: [
-                            EE_ACCOUNT_SEPAL_ENV         : config.googleEarthEngineAccount,
-                            EE_PRIVATE_KEY_SEPAL_ENV     : eePrivateKey,
-                            LDAP_HOST_SEPAL_ENV          : config.ldapHost,
-                            LDAP_ADMIN_PASSWORD_SEPAL_ENV: config.ldapPassword
-                    ],
-                    waitCommand: ["/script/wait_until_initialized.sh"])
+                name: 'google-earth-engine',
+                exposedPorts: [5002],
+                volumes: [
+                    (userHome): "/home/${username}",
+                    (userTmp): ["/tmp", "/home/${username}/tmp"],
+                    (ldapPem): "/etc/ldap/certificates/ldap-ca.crt.pem"],
+                runCommand: [
+                    '/script/init_download_container.sh',
+                    username],
+                environment: [
+                    EE_ACCOUNT_SEPAL_ENV: config.googleEarthEngineAccount,
+                    EE_PRIVATE_KEY_SEPAL_ENV: eePrivateKey,
+                    LDAP_HOST_SEPAL_ENV: config.ldapHost,
+                    LDAP_ADMIN_PASSWORD_SEPAL_ENV: config.ldapPassword,
+                    SEPAL_HOST_SEPAL_ENV: config.sepalHost,
+                    SEPAL_ADMIN_PASSWORD_SEPAL_ENV: config.sepalPassword,
+                ],
+                waitCommand: ["/script/wait_until_initialized.sh"])
             def taskExecutor = new Image(
-                    name: 'task-executor',
-                    exposedPorts: [1026],
-                    publishedPorts: taskExecutorPublishedPorts,
-                    links: [(googleEarthEngine.containerName(instance)): 'google-earth-engine'],
-                    volumes: [
-                            (userHome)                                : "/home/${username}",
-                            '/data/sepal/certificates/ldap-ca.crt.pem': "/etc/ldap/certificates/ldap-ca.crt.pem"],
-                    runCommand: [
-                            '/script/init_container.sh',
-                            username,
-                            config.sepalHost,
-                            config.ldapHost,
-                            config.ldapPassword,
-                            config.sepalUser,
-                            config.sepalPassword
-                    ],
-                    waitCommand: [
-                            "/script/wait_until_initialized.sh",
-                            taskExecutorPublishedPorts.values().join(';'),
-                            username
-                    ])
+                name: 'task-executor',
+                exposedPorts: [1026],
+                publishedPorts: taskExecutorPublishedPorts,
+                links: [(googleEarthEngine.containerName(instance)): 'google-earth-engine'],
+                volumes: [
+                    (userHome): "/home/${username}",
+                    (userTmp): ["/tmp", "/home/${username}/tmp"],
+                    (ldapPem): "/etc/ldap/certificates/ldap-ca.crt.pem"],
+                runCommand: [
+                    '/script/init_container.sh',
+                    username,
+                    config.sepalHost,
+                    config.ldapHost,
+                    config.ldapPassword,
+                    config.sepalUser,
+                    config.sepalPassword
+                ],
+                waitCommand: [
+                    "/script/wait_until_initialized.sh",
+                    taskExecutorPublishedPorts.values().join(';'),
+                    username
+                ])
             new WorkerType(TASK_EXECUTOR, [googleEarthEngine, taskExecutor])
         }
     }
 
     private static class SandboxFactory implements Factory {
         WorkerType create(String id, WorkerInstance instance, WorkerInstanceConfig config) {
-            def publishedPorts = [(222): 22, (8787): 8787, (3838): 3838, (5678): 5678]
+            def publishedPorts = [(222): 22, (8787): 8787, (3838): 3838, (8888): 8888]
             def username = instance.reservation.username
             def userHome = "$config.userHomes/${username}" as String
+            def userTmp = tempDir(instance, config)
+            def ldapPem = '/data/sepal/certificates/ldap-ca.crt.pem'
             new WorkerType(SANDBOX, [
-                    new Image(
-                            name: 'sandbox',
-                            exposedPorts: [22, 8787, 3838, 5678],
-                            publishedPorts: publishedPorts,
-                            volumes: [
-                                    '/data/sepal/shiny'                       : '/shiny',
-                                    (userHome)                                : "/home/${username}",
-                                    "/data/sepal/certificates/ldap-ca.crt.pem": "/etc/ldap/certificates/ldap-ca.crt.pem"],
-                            runCommand: [
-                                    '/script/init_container.sh',
-                                    username,
-                                    config.sepalHost,
-                                    config.ldapHost,
-                                    config.ldapPassword,
-                                    config.sepalUser,
-                                    config.sepalPassword
-                            ],
-                            waitCommand: [
-                                    "/script/wait_until_initialized.sh",
-                                    publishedPorts.values().join(';'),
-                                    username
-                            ]
-                    )
+                new Image(
+                    name: 'sandbox',
+                    exposedPorts: [22, 8787, 3838, 8888],
+                    publishedPorts: publishedPorts,
+                    volumes: [
+                        '/data/sepal/shiny': '/shiny',
+                        '/data/sepal/shared': "/home/${username}/shared",
+                        (userHome): "/home/${username}",
+                        (userTmp): ["/tmp", "/home/${username}/tmp"],
+                        (ldapPem): "/etc/ldap/certificates/ldap-ca.crt.pem"],
+                    runCommand: [
+                        '/script/init_container.sh',
+                        username,
+                        config.sepalHost,
+                        config.ldapHost,
+                        config.ldapPassword,
+                        config.sepalUser,
+                        config.sepalPassword
+                    ],
+                    waitCommand: [
+                        "/script/wait_until_initialized.sh",
+                        publishedPorts.values().join(';'),
+                        username
+                    ]
+                )
             ])
         }
     }
@@ -104,15 +115,23 @@ final class WorkerTypes {
     private interface Factory {
         WorkerType create(String id, WorkerInstance instance, WorkerInstanceConfig config)
     }
+
+    static String tempDir(instance, config) {
+        def username = instance.reservation.username
+        def localTmp = "$config.userHomes/$username/tmp/$instance.id" as String
+        new File(localTmp).mkdirs()
+        Terminal.execute(new File('/'), '/bin/chmod', '1777', localTmp)
+        return localTmp
+    }
 }
 
-@ImmutableData
+@Immutable
 final class WorkerType {
     final String id
     final List<Image> images = []
 }
 
-@ImmutableData
+@Immutable
 final class Image {
     String name
     List<Integer> exposedPorts = []
@@ -125,7 +144,7 @@ final class Image {
     List<String> waitCommand = []
 
     String containerName(WorkerInstance instance) {
-        "worker-${name}-${instance.reservation.username}"
+        "${instance.reservation.username}.${name}.worker"
     }
 }
 

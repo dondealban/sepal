@@ -6,15 +6,8 @@ echo "********************************"
 echo "*** Installing Orfeo ToolBox ***"
 echo "********************************"
 
-# install the ubuntigis version for use of ORFEO core modules
-apt-get install -y \
-    otb-bin \
-    libotb \
-    libotb-apps 
-
-# install the latest Orfeo packaged version for use of ORFEO remote modules
-otb=OTB-contrib-6.0.0-Linux64
-wget https://www.orfeo-toolbox.org/packages/$otb.run
+otb=OTB-7.0.0-Linux64
+wget -nv https://www.orfeo-toolbox.org/packages/$otb.run
 chmod +x $otb.run
 mv $otb.run /usr/local/lib
 cd /usr/local/lib

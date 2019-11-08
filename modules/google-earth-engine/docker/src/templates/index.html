@@ -41,23 +41,31 @@
 
                 <p>
                     <label for="target-day-of-year-weight">Target day of year weight</label><br/>
-                    <input type="text" id="target-day-of-year-weight" value="0.5">
+                    <input type="text" id="target-day-of-year-weight" value="0">
                 </p>
 
                 <p>
                     <label for="shadow-tolerance">Shadow tolerance</label><br/>
-                    <input type="text" id="shadow-tolerance" value="0.5">
+                    <input type="text" id="shadow-tolerance" value="1">
+                </p>
+
+                <p>
+                    <label for="haze-tolerance">Haze tolerance</label><br/>
+                    <input type="text" id="haze-tolerance" value="0.5">
+                </p>
+
+
+                <p>
+                    <label for="greenness-weight">Greenness weight</label><br/>
+                    <input type="text" id="greenness-weight" value="0.5">
                 </p>
 
                 <p id="dataSet">
                     <input id="dataSet.LANDSAT" type="radio" name="dataSet" checked value="LANDSAT">
                     <label for="dataSet.LANDSAT">Landsat</label>
 
-                    <input id="dataSet.SENTINEL2" type="radio" name="dataSet" value="SENTINEL2">
-                    <label for="dataSet.SENTINEL2">Sentinel 2</label>
-
-                    <input id="dataSet.ASTER" type="radio" name="dataSet" value="ASTER">
-                    <label for="dataSet.ASTER">ASTER</label>
+                    <input id="dataSet.SENTINEL_2" type="radio" name="dataSet" value="SENTINEL_2">
+                    <label for="dataSet.SENTINEL_2">Sentinel 2</label>
                 </p>
 
                 <p id="sensors">
@@ -72,41 +80,42 @@
                     <label for="LANDSAT_TM">Landsat 4-5 TM</label><br/>
                 </p>
 
-                <p id="classes-to-mask" style="display: none">
-                    <label>Classes to mask</label><br/>
-                    <input type="checkbox" id="land">
-                    <label for="land">Land</label>
-                    <input type="checkbox" id="water">
-                    <label for="water">Water</label>
-                    <input type="checkbox" id="cloud-shadow" checked>
-                    <label for="cloud-shadow">Cloud shadow</label>
-                    <input type="checkbox" id="cloud" checked>
-                    <label for="cloud">Cloud</label>
-                    <input type="checkbox" id="snow" checked>
-                    <label for="snow">Snow</label>
+                <p>
+                    <input id="surface-reflectance" type="checkbox" name="surface-reflectance" checked>
+                    <label for="surface-reflectance">Surface reflectance</label>
                 </p>
 
                 <p>
-                    <input id="median-composite" type="checkbox" name="median-composite">
-                    <label for="median-composite">Median composite</label>
+                    <input id="mask-clouds" type="checkbox" name="mask-clouds" checked>
+                    <label for="mask-clouds">Mask clouds</label>
+                </p>
+
+                <p>
+                    <input id="mask-snow" type="checkbox" name="mask-snow" checked>
+                    <label for="mask-snow">Mask snow</label>
                 </p>
 
                 <p>
                     <input id="brdf-correct" type="checkbox" name="brdf-correct">
                     <label for="brdf-correct">BRDF correct</label>
                 </p>
+
+                <p>
+                    <input id="median-composite" type="checkbox" name="median-composite">
+                    <label for="median-composite">Median composite</label>
+                </p>
                 <p>
                     <label for="bands1">Bands 1</label><br/>
                     <select id="bands1">
-                        <option value="red, green, blue">Natural (Red, Green, Blue)</option>
-                        <option value="nir, red, green">Infrared (NIR, Red, Green)</option>
-                        <option value="nir, swir1, red">False color (NIR, SWIR 1, Red)</option>
-                        <option value="swir2, nir, red">False color (SWIR 2, NIR, Red)</option>
-                        <option value="swir2, swir1, red">False color (SWIR 2, SWIR 1, Red)</option>
-                        <option value="swir2, nir, green">False color (SWIR 2, NIR, Green)</option>
-                        <option value="unixTimeDays">Unix Time Days</option>
-                        <option value="dayOfYear">Day of year</option>
-                        <option value="daysFromTarget">Days from target</option>
+                        <option value="RED, GREEN, BLUE">Natural (Red, Green, Blue)</option>
+                        <option value="NIR, RED, GREEN">Infrared (NIR, Red, Green)</option>
+                        <option value="NIR, SWIR1, RED">False color (NIR, SWIR 1, Red)</option>
+                        <option value="SWIR2, NIR, RED">False color (SWIR 2, NIR, Red)</option>
+                        <option value="SWIR2, SWIR1, RED">False color (SWIR 2, SWIR 1, Red)</option>
+                        <option value="SWIR2, NIR, GREEN">False color (SWIR 2, NIR, Green)</option>
+                        <option value="UNIX_TIME_DAYS">Unix Time Days</option>
+                        <option value="DAY_OF_YEAR">Day of year</option>
+                        <option value="DAYS_FROM_TARGET">Days from target</option>
                     </select>
                 </p>
                 <p>
@@ -118,16 +127,18 @@
                         <option value="swir2, nir, red">False color (SWIR 2, NIR, Red)</option>
                         <option value="swir2, swir1, red">False color (SWIR 2, SWIR 1, Red)</option>
                         <option value="swir2, nir, green">False color (SWIR 2, NIR, Green)</option>
-                        <option value="unixTimeDays">Date</option>
-                        <option value="dayOfYear">Day of year</option>
-                        <option value="daysFromTarget">Days from target</option>
+                        <option value="UNIX_TIME_DAYS">Date</option>
+                        <option value="DAY_OF_YEAR">Day of year</option>
+                        <option value="DAYS_FROM_TARGET">Days from target</option>
                     </select>
                 </p>
                 <p>
                     <input id="exportName">
-                    <input type="button" id="exportMosaic" value="Export">
+                    <input type="button" id="exportMosaic" value="Retrieve to Sepal">
+                    <input type="button" id="exportAssetMosaic" value="Export as Earth Engine asset">
                 </p>
                 <input type="submit" value="Preview">
+                <div id="exportStatus"></div>
             </form>
 
         </td>
@@ -150,12 +161,45 @@
                 <div id="sceneAreas"></div>
             </form>
 
-            <form id="exportForm">
+            <form id="classifyForm">
                 <p>
-                    <label for="exportParams">Export params</label><br/>
-                    <textarea id="exportParams" rows="20" cols="30"></textarea>
+                    <label for="fusionTable">Fusion Table ID</label><br/>
+                    <input type="text" id="fusionTable">
                 </p>
-                <input type="submit" value="Export">
+                <p>
+                    <label for="classProperty">Class property</label><br/>
+                    <input type="text" id="classProperty">
+                </p>
+                <input type="submit" value="Classify">
+            </form>
+
+
+            <form id="timeseriesForm">
+                <h3>Time-series</h3>
+                <p>
+                    <label for="timeseriesName">Name</label><br/>
+                    <input type="text" id="timeseriesName">
+                </p>
+                <p>
+                    <label for="expression">Data</label><br/>
+                    <input type="text" id="expression" value="10000 * (1 + (i.nir - i.red) / (i.nir + i.red))">
+                </p>
+                <p id="timeseriesDataSets">
+                    <input type="checkbox" id="sentinel2" checked>
+                    <label for="sentinel2">Sentinel2</label><br/>
+
+                    <input type="checkbox" id="landsat8" checked>
+                    <label for="landsat8">Landsat 8</label><br/>
+
+                    <input type="checkbox" id="landsat7" checked>
+                    <label for="landsat7">Landsat 7</label><br/>
+
+                    <input type="checkbox" id="landsat5" checked>
+                    <label for="landsat5">Landsat 5</label><br/>
+
+                </p>
+                <input type="submit" value="Download">
+                <div id="timeseriesStatus"></div>
             </form>
 
             <h2>Response</h2>

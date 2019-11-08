@@ -5,6 +5,7 @@ import org.openforis.sepal.component.budget.BudgetComponent
 import org.openforis.sepal.component.datasearch.DataSearchComponent
 import org.openforis.sepal.component.files.FilesComponent
 import org.openforis.sepal.component.hostingservice.HostingServiceAdapter
+import org.openforis.sepal.component.notification.NotificationComponent
 import org.openforis.sepal.component.processingrecipe.ProcessingRecipeComponent
 import org.openforis.sepal.component.sandboxwebproxy.SandboxWebProxyComponent
 import org.openforis.sepal.component.task.TaskComponent
@@ -13,7 +14,6 @@ import org.openforis.sepal.component.workerinstance.WorkerInstanceComponent
 import org.openforis.sepal.component.workersession.WorkerSessionComponent
 import org.openforis.sepal.endpoint.Endpoints
 import org.openforis.sepal.endpoint.Server
-import org.openforis.sepal.security.GateOneAuthEndpoint
 import org.openforis.sepal.security.PathRestrictionsFactory
 import org.openforis.sepal.sql.DatabaseConfig
 import org.openforis.sepal.sql.SqlConnectionManager
@@ -31,10 +31,10 @@ class Main {
         def hostingServiceAdapter = HostingServiceAdapter.Factory.create(config.hostingService)
         def connectionManager = SqlConnectionManager.create(DatabaseConfig.fromPropertiesFile('sdms'))
 
-        def dataSearchComponent = start DataSearchComponent.create(connectionManager)
-        def workerInstanceComponent = start new WorkerInstanceComponent(hostingServiceAdapter, connectionManager)
         def processingRecipeComponent = start ProcessingRecipeComponent.create()
-        def budgetComponent = start BudgetComponent.create(hostingServiceAdapter, connectionManager)
+        def workerInstanceComponent = start WorkerInstanceComponent.create(hostingServiceAdapter)
+        def filesComponent = stoppable new FilesComponent(new File(config.userHomesDir))
+        def budgetComponent = start BudgetComponent.create(hostingServiceAdapter, filesComponent, connectionManager)
         def workerSessionComponent = start WorkerSessionComponent.create(
                 budgetComponent,
                 workerInstanceComponent,
@@ -46,21 +46,22 @@ class Main {
                 new HttpWorkerGateway(config.sepalUsername, config.sepalPassword, 1026),
                 connectionManager
         )
+        def dataSearchComponent = start DataSearchComponent.create(processingRecipeComponent, taskComponent, connectionManager)
         start new SandboxWebProxyComponent(config, workerSessionComponent, hostingServiceAdapter)
-        def filesComponent = stoppable new FilesComponent(new File(config.userHomesDir))
         def appsComponent = new AppsComponent(config.appsFile)
+        def notificationComponent = start NotificationComponent.create()
 
-        def gateOneAuthEndpoint = new GateOneAuthEndpoint(config.gateOnePublicKey, config.gateOnePrivateKey)
         def endpoints = new Endpoints(
                 PathRestrictionsFactory.create(),
-                gateOneAuthEndpoint,
                 dataSearchComponent,
                 workerSessionComponent,
+                budgetComponent,
                 filesComponent,
                 taskComponent,
-                budgetComponent,
                 processingRecipeComponent,
-                appsComponent)
+                appsComponent,
+                notificationComponent
+        )
         start new Server(config.webAppPort, '/api', endpoints)
         addShutdownHook { stop() }
     }

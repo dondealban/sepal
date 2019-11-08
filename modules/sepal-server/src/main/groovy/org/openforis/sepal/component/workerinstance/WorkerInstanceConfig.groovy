@@ -1,11 +1,11 @@
 package org.openforis.sepal.component.workerinstance
 
+import groovy.transform.Canonical
 import org.openforis.sepal.util.Config
-import org.openforis.sepal.util.annotation.Data
 
-@Data
+@Canonical
 class WorkerInstanceConfig {
-    final int sepalVersion
+    final String sepalVersion
     final String sepalUser
     final String sepalPassword
     final String sepalHost
@@ -20,7 +20,7 @@ class WorkerInstanceConfig {
 
     WorkerInstanceConfig() {
         def c = new Config('workerInstance.properties')
-        sepalVersion = c.integer('sepalVersion')
+        sepalVersion = c.string('sepalVersion')
         sepalUser = c.string('sepalUser')
         sepalPassword = c.string('sepalPassword')
         sepalHost = c.string('sepalHost')
@@ -32,5 +32,9 @@ class WorkerInstanceConfig {
         dockerRegistryHost = c.string('dockerRegistryHost')
         googleEarthEngineAccount = c.string('googleEarthEngineAccount')
         googleEarthEnginePrivateKey = c.string('googleEarthEnginePrivateKey')
+    }
+
+    static boolean isOlderVersion(String sepalVersion1, String sepalVersion2) {
+        Comparator.comparingInt { it.find(/\d*/) as int }.compare(sepalVersion1, sepalVersion2) < 0
     }
 }

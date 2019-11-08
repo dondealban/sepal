@@ -6,7 +6,6 @@ import org.openforis.sepal.user.User
 
 import static groovy.json.JsonOutput.toJson
 import static groovyx.net.http.ContentType.JSON
-import static groovyx.net.http.ContentType.URLENC
 
 class HttpGoogleEarthEngineGateway implements GoogleEarthEngineGateway {
     private final String targetUri
@@ -15,11 +14,11 @@ class HttpGoogleEarthEngineGateway implements GoogleEarthEngineGateway {
         this.targetUri = targetUri
     }
 
-    Collection<SceneArea> findSceneAreasInAoi(DataSet dataSet, Aoi aoi, User user) {
+    Collection<SceneArea> findSceneAreasInAoi(String source, Aoi aoi, User user) {
         def response = endpoint.get(
                 path: 'sceneareas',
                 contentType: JSON,
-                query: [dataSet: dataSet.name(), aoi: toJson(aoi.params)],
+                query: [source: source, aoi: toJson(aoi.params)],
                 headers: ['sepal-user': toJson(user)]
         )
         return response.data.collect {
@@ -31,56 +30,12 @@ class HttpGoogleEarthEngineGateway implements GoogleEarthEngineGateway {
 
     }
 
-    MapLayer preview(AutomaticSceneSelectingMapQuery query, User user) {
-        def image = [
-                type                 : 'automatic',
-                dataSet              : query.dataSet.name(),
-                aoi                  : query.aoi.params,
-                targetDayOfYear      : query.targetDayOfYear,
-                targetDayOfYearWeight: query.targetDayOfYearWeight,
-                shadowTolerance      : query.shadowTolerance,
-                medianComposite      : query.medianComposite,
-                brdfCorrect          : query.brdfCorrect,
-                maskWater            : query.maskWater,
-                maskSnow             : query.maskSnow,
-                bands                : query.bands,
-                sensors              : query.sensors,
-                fromDate             : query.fromDate,
-                toDate               : query.toDate,
-        ]
+    MapLayer preview(Map image, User user) {
         def response = endpoint.post(
                 path: 'preview',
-                requestContentType: URLENC,
+                requestContentType: JSON,
                 contentType: JSON,
-                body: [image: toJson(image)],
-                headers: ['sepal-user': toJson(user)]
-        )
-        return new MapLayer(
-                id: response.data.mapId,
-                token: response.data.token
-        )
-    }
-
-    MapLayer preview(PreselectedScenesMapQuery query, User user) {
-        def image = [
-                type                 : 'manual',
-                dataSet              : query.dataSet.name(),
-                aoi                  : query.aoi.params,
-                targetDayOfYear      : query.targetDayOfYear,
-                targetDayOfYearWeight: query.targetDayOfYearWeight,
-                shadowTolerance      : query.shadowTolerance,
-                medianComposite      : query.medianComposite,
-                brdfCorrect          : query.brdfCorrect,
-                maskWater            : query.maskWater,
-                maskSnow             : query.maskSnow,
-                bands                : query.bands,
-                sceneIds             : query.sceneIds
-        ]
-        def response = endpoint.post(
-                path: 'preview',
-                requestContentType: URLENC,
-                contentType: JSON,
-                body: [image: toJson(image)],
+                body: toJson(image),
                 headers: ['sepal-user': toJson(user)]
         )
         return new MapLayer(

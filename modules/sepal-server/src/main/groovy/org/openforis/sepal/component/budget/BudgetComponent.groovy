@@ -1,14 +1,18 @@
 package org.openforis.sepal.component.budget
 
+import groovy.transform.Canonical
 import groovymvc.Controller
 import org.openforis.sepal.component.DataSourceBackedComponent
+import org.openforis.sepal.component.budget.adapter.FilesComponentBackedUserFiles
 import org.openforis.sepal.component.budget.adapter.JdbcBudgetRepository
+import org.openforis.sepal.component.budget.adapter.UserFiles
 import org.openforis.sepal.component.budget.api.HostingService
 import org.openforis.sepal.component.budget.command.*
 import org.openforis.sepal.component.budget.endpoint.BudgetEndpoint
 import org.openforis.sepal.component.budget.internal.InstanceSpendingService
 import org.openforis.sepal.component.budget.internal.StorageUseService
 import org.openforis.sepal.component.budget.query.*
+import org.openforis.sepal.component.files.FilesComponent
 import org.openforis.sepal.component.hostingservice.HostingServiceAdapter
 import org.openforis.sepal.endpoint.EndpointRegistry
 import org.openforis.sepal.event.AsynchronousEventDispatcher
@@ -19,57 +23,64 @@ import org.openforis.sepal.user.UserRepository
 import org.openforis.sepal.util.Clock
 import org.openforis.sepal.util.Config
 import org.openforis.sepal.util.SystemClock
-import org.openforis.sepal.util.annotation.Data
 
+import static java.util.concurrent.TimeUnit.HOURS
 import static java.util.concurrent.TimeUnit.MINUTES
 
 class BudgetComponent extends DataSourceBackedComponent implements EndpointRegistry {
 
-    static BudgetComponent create(HostingServiceAdapter hostingServiceAdapter, SqlConnectionManager connectionManager) {
+    static BudgetComponent create(HostingServiceAdapter hostingServiceAdapter, FilesComponent filesComponent,
+                                  SqlConnectionManager connectionManager) {
         def config = new BudgetConfig()
         new BudgetComponent(
-                connectionManager,
-                hostingServiceAdapter.hostingService,
-                new RestUserRepository(config.userEndpoint, config.userEndpointUser),
-                new AsynchronousEventDispatcher(),
-                new SystemClock()
+            connectionManager,
+            hostingServiceAdapter.hostingService,
+            new RestUserRepository(config.userEndpoint, config.userEndpointUser),
+            new FilesComponentBackedUserFiles(filesComponent),
+            new AsynchronousEventDispatcher(),
+            new SystemClock()
         )
     }
 
     BudgetComponent(
-            SqlConnectionManager connectionManager,
-            HostingService hostingService,
-            UserRepository userRepository,
-            HandlerRegistryEventDispatcher eventDispatcher,
-            Clock clock) {
+        SqlConnectionManager connectionManager,
+        HostingService hostingService,
+        UserRepository userRepository,
+        UserFiles userFiles,
+        HandlerRegistryEventDispatcher eventDispatcher,
+        Clock clock) {
         super(connectionManager, eventDispatcher)
         def budgetRepository = new JdbcBudgetRepository(connectionManager, clock)
         def instanceSpendingService = new InstanceSpendingService(budgetRepository, hostingService, clock)
-        def storageUseService = new StorageUseService(budgetRepository, hostingService, clock)
+        def storageUseService = new StorageUseService(budgetRepository, userFiles, hostingService, clock)
+        def generateSpendingReportHandler = new GenerateSpendingReportHandler(instanceSpendingService, storageUseService, budgetRepository, userRepository)
 
         def instanceSpendingChecker = new CheckUserInstanceSpendingHandler(instanceSpendingService, budgetRepository, eventDispatcher)
         command(CheckUserInstanceSpending, instanceSpendingChecker)
         def storageUseChecker = new CheckUserStorageUseHandler(storageUseService, budgetRepository, eventDispatcher)
         command(CheckUserStorageUse, storageUseChecker)
         command(UpdateBudget, new UpdateBudgetHandler(budgetRepository))
-        command(DetermineUserStorageUsage, new DetermineUserStorageUsageHandler(storageUseService, userRepository))
+        command(DetermineUserStorageUsage, new DetermineUserStorageUsageHandler(storageUseService, userRepository, connectionManager))
+        command(UpdateSpendingReport, new UpdateSpendingReportHandler(budgetRepository, generateSpendingReportHandler, connectionManager))
 
         query(GenerateSpendingReport,
-                new GenerateSpendingReportHandler(instanceSpendingService, storageUseService, budgetRepository, userRepository))
+            generateSpendingReportHandler)
         query(GenerateUserSpendingReport,
-                new GenerateUserSpendingReportHandler(instanceSpendingService, storageUseService, budgetRepository))
+            new GenerateUserSpendingReportHandler(instanceSpendingService, storageUseService, budgetRepository))
         query(FindUsersExceedingBudget, new FindUsersExceedingBudgetHandler(userRepository, instanceSpendingChecker, storageUseChecker))
+        query(LoadSpendingReport, new LoadSpendingReportHandler(budgetRepository))
     }
 
     void onStart() {
         schedule(1, MINUTES, new DetermineUserStorageUsage())
+        schedule(1, HOURS, new UpdateSpendingReport())
     }
 
     void registerEndpointsWith(Controller controller) {
         new BudgetEndpoint(this).registerWith(controller)
     }
 
-    @Data
+    @Canonical
     private static final class BudgetConfig {
         final String userEndpoint
         final String userEndpointUser

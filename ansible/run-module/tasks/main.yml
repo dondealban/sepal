@@ -3,10 +3,13 @@
   script: "start_time.sh {{ container_name | default(module) }}"
   register: start_time_before_docker_container
 
+
+- docker_network: name=sepal
+
 - name: "Run {{ module }}"
-  include: "../../../modules/{{ module }}/run.yml"
+  include_tasks: "../../../modules/{{ module }}/run.yml"
   vars:
-    api_version: "1.22"
+    api_version: "1.38"
     name: "{{ container_name | default(module) }}"
     pull: "{{ docker_repository_host != 'localhost' }}"
     image: "{{ docker_repository_host + '/' if docker_repository_host else '' }}openforis/{{ container_name | default(module) }}:{{ version }}"

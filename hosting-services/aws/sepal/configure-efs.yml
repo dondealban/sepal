@@ -1,6 +1,6 @@
 - name: Configure Sepal instance
   hosts: "tag_Type_Sepal:&tag_Environment_{{ deploy_environment }}:&{{ region }}"
-  user: ubuntu
+  user: ec2-user
   become: yes
   gather_facts: true
 
@@ -8,9 +8,9 @@
     - "{{ secret_vars_file }}"
 
   tasks:
-    - name: Install nfs-common
-      apt:
-        name: "nfs-common"
+    - name: Install amazon-efs-utils
+      yum:
+        name: 'amazon-efs-utils'
 
     - name: Create temp mount dir
       file:
@@ -20,9 +20,12 @@
     - name: Temporarily Mount EFS Nfs4 For Setting Up Folders
       mount:
         name: "/efs"
-        fstype: "nfs4"
+        fstype: "efs"
         state: "mounted"
-        src: "{{ availability_zone }}.{{ efs_id }}.efs.{{ region }}.amazonaws.com:/"
+        src: "{{ efs_id }}:/"
+        opts: "defaults,_netdev"
+        dump: 0
+        passno: 0
 
     - name: Create sepal home dir on EFS
       file:
@@ -40,12 +43,28 @@
         mode: "u=rwx,g=rwxs"
         state: "directory"
 
+    - name: Create sepal shared dir on EFS
+      file:
+        path: "/efs/data/sepal/shared"
+        owner: "9999"
+        group: "9999"
+        mode: "u=rwx,g=rwxs"
+        state: "directory"
+    
+    - name: Create sepal worker instance log dir on EFS
+      file:
+        path: "/efs/data/sepal/worker-instance-log"
+        owner: "root"
+        group: "root"
+        mode: "u=rwx,g=rwxs"
+        state: "directory"
+
     - name: Unmount EFS Nfs4
       mount:
           name: "/efs"
-          fstype: "nfs4"
+          fstype: "efs"
           state: "unmounted"
-          src: "{{ availability_zone }}.{{ efs_id }}.efs.{{ region }}.amazonaws.com:/"
+          src: "{{ efs_id }}:/"
 
     - name: Delete temp mount dir
       file:

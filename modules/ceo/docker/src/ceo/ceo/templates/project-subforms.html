@@ -11,6 +11,19 @@
     </div>
 </div>
 
+<div class="card w-100 card-inverse subform-template" id="geea-gateway-subform-template" style="display: none;">
+    <input type="hidden" class="form-control" name="layerType[]" value="geea-gateway" />
+    <div class="card-header">
+        <i class="fa fa-map-o" aria-hidden="true"></i>&nbsp;Google Earth Engine (Asset)
+        <button type="submit" class="btn btn-danger remove-subform float-right">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="card-block">
+        {% include "project-subform-geea.html" %}
+    </div>
+</div>
+
 <div class="card w-100 card-inverse subform-template" id="digitalglobe-subform-template" style="display: none;">
     <input type="hidden" class="form-control" name="layerType[]" value="digitalglobe" />
     <div class="card-header">
@@ -63,6 +76,19 @@
     </div>
 </div>
 
+<div class="card w-100 card-inverse subform-template" id="geoserver-subform-template" style="display: none;">
+    <input type="hidden" class="form-control" name="layerType[]" value="geoserver" />
+    <div class="card-header">
+        <i class="fa fa-map-o" aria-hidden="true"></i>&nbsp;GeoServer
+        <button type="submit" class="btn btn-danger remove-subform float-right">
+            <i class="fa fa-trash-o" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="card-block">
+        {% include "project-subform-geoserver.html" %}
+    </div>
+</div>
+
 <div class="card w-100 card-inverse subform-template" id="planet-subform-template" style="display: none;">
     <input type="hidden" class="form-control" name="layerType[]" value="planet" />
     <div class="card-header">
@@ -109,34 +135,22 @@
         ],
         'ASTER/AST_L1T_003': [
             { id: 201, name: 'NIR, SWIR1, RED', min: 0, max: '110, 25, 90', band1: 'nir', band2: 'swir1', band3: 'red', 'gamma': 1.7 }
-        ]
-    };
-    var planetApiVersions = {
-        'v0': [
-            { value: "global_quarterly_2016q3_mosaic", text: "Q3 2016" },
-            { value: "global_quarterly_2016q4_mosaic", text: "Q4 2016" },
-            { value: "global_quarterly_2017q1_mosaic", text: "Q1 2017" },
-            { value: "global_quarterly_2017q2_mosaic", text: "Q2 2017" }
         ],
-        'v1': [
-            { value: "global_quarterly_2016q4_mosaic", text: "Q4 2016" },
-            { value: "global_quarterly_2017q1_mosaic", text: "Q1 2017" },
-            { value: "global_quarterly_2017q2_mosaic", text: "Q2 2017" }
+        'NDVI_CHANGE': [
+            { id: 301, name: 'RED, BLACK, GREEN', min: -0.75, max: 0.75, 'palette': 'red, black, green' }
         ]
     };
 </script>
 
-<div style="display: none;" id="codelist-values-subform-template" class="subform-template">
-    <div class="container">
-        <div class="form-group row">
-            <div class="offset-4 col-4">
-                <input type="text" class="form-control" name="codeListCode[]" />
-            </div>
-            <div class="col-2">
-                <button type="submit" class="btn btn-danger remove-subform float-left">
-                    <i class="fa fa-trash-o" aria-hidden="true"></i>
-                </button>
-            </div>
+<div class="subform-template container" id="codelist-values-subform-template" style="display: none;">
+    <div class="form-group row">
+        <div class="col-4 offset-4">
+            <input type="text" class="form-control" name="codeListCode[]" />
+        </div>
+        <div class="col-4">
+            <button type="submit" class="btn btn-danger remove-subform">
+                <i class="fa fa-trash-o" aria-hidden="true"></i>
+            </button>
         </div>
     </div>
 </div>

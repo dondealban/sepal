@@ -10,8 +10,10 @@ mkdir /var/run/sshd
 # Setup /etc/environment
 printf '%s\n' \
     'PATH="usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/lib/orfeo/bin"' \
-    'JAVA_HOME="/usr/lib/jvm/java-8-oracle"' \
-    'GDAL_DATA="/usr/share/gdal/2.1"' \
+    'JAVA_HOME="/usr/local/lib/sdkman/candidates/java/current"' \
+    'SDKMAN_DIR="/usr/local/lib/sdkman"' \
+    'GDAL_DATA="/usr/share/gdal"' \
+    'SHELL="/bin/bash"' \
     'SEPAL="true"' \
     >> /etc/environment
 

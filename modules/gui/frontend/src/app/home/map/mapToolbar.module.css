@@ -1,0 +1,27 @@
+.mapToolbar {
+    --look-default-h: 196;
+    --look-default-s: 27%;
+    --look-default-l: 20%;
+    --look-default-a: .9;
+
+    --look-highlight-h: 196;
+    --look-highlight-s: 27%;
+    --look-highlight-l: 40%;
+    --look-highlight-a: .95;
+
+    --look-disabled-h: 196;
+    --look-disabled-s: 5%;
+    --look-disabled-l: 15%;
+    --look-disabled-a: .9;
+
+    margin-right: 6rem;
+}
+
+.metersPerPixel {
+    position: absolute;
+    top: 1rem;
+    right: .5rem;
+    height: var(--toolbar-button-size);
+    font-size: .8rem;
+    color: #ccc;
+}

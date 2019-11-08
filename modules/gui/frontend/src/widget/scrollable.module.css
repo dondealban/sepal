@@ -1,0 +1,24 @@
+.unscrollable {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.scrollable {
+    /* Enable momentum scrolling on iDevices */
+    -webkit-overflow-scrolling: touch;
+    user-select: none;
+    pointer-events: all;
+}
+
+.scrollable.x {
+    overflow-x: auto;
+}
+
+.scrollable.y {
+    overflow-y: auto;
+}
+
+.scrollable.xy {
+    overflow: auto;
+}

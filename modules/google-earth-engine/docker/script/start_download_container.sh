@@ -2,9 +2,10 @@
 
 account=$1
 privateKeyPath=$2
-downloadDir=$3
+homeDir=$3
 worker_user=$4
-access_key_path=/home/$worker_user/.google-access-token
+sepal_host=$5
+sepal_password=$6
 
 for i in {30..0}; do
     if [ $(getent passwd $worker_user | wc -l) -eq 1 ]; then
@@ -20,4 +21,12 @@ else
     echo "User $worker_user initialized"
 fi
 
-exec su - $worker_user -c "python -s /src/download_server.py $account $privateKeyPath $downloadDir $worker_user $access_key_path"
+exec su - ${worker_user} -c "python3 -s /src/task_server.py \
+ --gee-email ${account} \
+ --gee-key-path ${privateKeyPath} \
+ --sepal-host ${sepal_host} \
+ --sepal-username sepalAdmin \
+ --sepal-password \"${sepal_password}\" \
+ --username ${worker_user} \
+ --home-dir ${homeDir} \
+ "

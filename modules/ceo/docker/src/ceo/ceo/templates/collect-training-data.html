@@ -2,8 +2,15 @@
 {% block body %}
 
 <div id="maps">
-    <div id="style-selector-control" class="map-control">
-        <select id="layer-selector" class="selector-control">
+    <div class="map-control map-control-left">
+        <select class="selector-control" id="base-selector">
+            <option value="">SEPAL</option>
+            <option value="satellite">SATELLITE</option>
+        </select>
+    </div>
+    <div class="map-control">
+        <button type="button" id="layer-refresher"><i class="fa fa-refresh" aria-hidden="true"></i></button>
+        <select class="selector-control" id="layer-selector">
             <option value="">Default</option>
         </select>
     </div>
@@ -12,15 +19,25 @@
 </div>
 
 <div id="collect" class="container-fluid">
-    <div class="form-group row">
-        <div class="col">
-            <div class="btn-group" role="group">
-                <button id="btnGroupDrop1" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
-                    <i class="fa fa-download" aria-hidden="true"></i>&nbsp;Export
+    <div class="row" style="margin-bottom: 1em;">
+        <div class="col-md-12 col-lg-6">
+            <a class="btn btn-primary" id="export-csv" href="#"><i class="fa fa-download" aria-hidden="true"></i>&nbsp;CSV</a>
+        </div>
+        <div class="col-md-12 col-lg-6">
+            <div class="btn-group float-right" role="group">
+                <button id="btnGroupDrop0" type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown">
+                    <i class="fa fa-link" aria-hidden="true"></i>&nbsp;Google Fusion Tables
                 </button>
-                <div class="dropdown-menu" aria-labelledby="btnGroupDrop1">
-                    <a id="export-csv" class="dropdown-item" href="#">CSV</a>
-                    <a id="export-fusiontables" class="dropdown-item" href="#">Google Fusion Tables</a>
+                <div class="dropdown-menu" aria-labelledby="btnGroupDrop0">
+                    <a id="ft-export" class="dropdown-item" href="#" style="display: none;">
+                        <i class="fa fa-upload" aria-hidden="true"></i>&nbsp;Export
+                    </a>
+                    <a id="ft-exported" class="dropdown-item" href="#" target="_blank" style="display: none;">
+                        <i class="fa fa-external-link" aria-hidden="true"></i>&nbsp;Open
+                    </a>
+                    <a id="ft-clipboard" class="dropdown-item" href="#" style="display: none;">
+                        <i class="fa fa-clipboard" aria-hidden="true"></i>&nbsp;Clipboard
+                    </a>
                 </div>
             </div>
         </div>
@@ -47,6 +64,8 @@
                             <a class="dropdown-item chart-btn" href="#">NDMI</a>
                             <a class="dropdown-item chart-btn" href="#">NDVI</a>
                             <a class="dropdown-item chart-btn" href="#">NDWI</a>
+                            <a class="dropdown-item chart-btn" href="#">NBR</a>
+                            <a class="dropdown-item chart-btn" href="#">LSAVI</a>
                         </div>
                     </div>
                 </div>
@@ -76,7 +95,8 @@
     </div>
 </div>
 
-<script src="static/js/ceo-map-utils.js?v1"></script>
+<script src="static/js/ceo-map-utils.js?v3"></script>
+<script src="static/js/overlay-map-manager.js?v5"></script>
 
 <script>
 
@@ -85,249 +105,72 @@
         var ceoSepalApiUrl = '{{config.CEO_API_URL}}';
         var geeGatewayApiUrl = '{{config.GEEG_API_URL}}';
 
+        overlayMapManager['config'] = {
+            'geeGatewayApiUrl': '{{config.GEEG_API_URL}}',
+            'digitalGlobeApiKey': '{{config.DIGITALGLOBE_API_KEY}}',
+            'dgcsConnectId': '{{config.DGCS_CONNECT_ID}}',
+            'planetProxyUrl': ceoSepalApiUrl + '/proxy/planet',
+            'sepalHost': '{{config.SEPAL_HOST}}'
+        };
+
+        var worker = function (o, resolve, reject, params) {
+            setTimeout(function () {
+                if (o === 'deleteRecord') {
+                    var record_id = params['record_id'];
+                    $.ajax({
+                        url: ceoSepalApiUrl + '/record/' + record_id,
+                        method: 'delete'
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error(jqXHR, textStatus, errorThrown);
+                        reject('');
+                    }).done(function(data, textStatus, jqXHR) {
+                        resolve();
+                    });
+                } else if (o === 'addOrEditRecord') {
+                    var record = params['record'];
+                    var url = params['url'];
+                    var method = params['method'];
+                    $.ajax({
+                        url: url,
+                        method: method,
+                        data: JSON.stringify(record),
+                        contentType: 'application/json;charset=UTF-8'
+                    }).fail(function(jqXHR, textStatus, errorThrown) {
+                        console.error(jqXHR, textStatus, errorThrown);
+                        reject();
+                    }).done(function(data, textStatus, jqXHR) {
+                        resolve();
+                    });
+                }
+            }, Math.random() * 1000);
+        };
+
+        var queue = Queue(worker);
+
+        window.onbeforeunload = function(e) {
+            if (!queue.empty()) {
+                return 'Changes you made may not be saved';
+            }
+        };
+
         var project_id = $.urlParam('id');
 
         var gmap, lmap;
         var overlays = [];
-        var overlayMapTypes = {};
         var radius = 30;
         var shapes = {};
 
-        function addOverlayMapType(overlay, overlayMapTypes, index) {
-            var layerName = overlay.layerName;
-            if (overlay.type == 'gee-gateway') {
-                var collectionName = overlay.collectionName;
-                var bands = '';
-                var b1 = overlay.band1;
-                var b2 = overlay.band2;
-                var b3 = overlay.band3;
-                if (b1 != '' && b2 != '' && b3 != '') {
-                    bands = b1 + ',' + b2 + ',' + b3;
-                }
-                var visParams = {
-                    min: overlay.min,
-                    max: overlay.max,
-                    bands: bands
-                };
-                var gamma = overlay.gamma;
-                if (gamma != '') visParams['gamma'] = gamma;
-                var dateFrom = overlay.dateFrom;
-                var dateTo = overlay.dateTo;
-                var url = geeGatewayApiUrl;
-                if (collectionName == 'ASTER/AST_L1T_003') {
-                    url += '/asterMosaic';
-                } else {
-                    url += '/imageByMosaicCollection';
-                }
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    async: false,
-                    crossDomain : true,
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        collectionName: collectionName,
-                        visParams, visParams,
-                        dateFrom: dateFrom,
-                        dateTo: dateTo
-                    })
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error(jqXHR, textStatus, errorThrown);
-                }).done(function(data, textStatus, jqXHR) {
-                    if (data.errMsg) {
-                        console.error(data, textStatus, jqXHR);
-                    } else {
-                        if (data.hasOwnProperty('mapid')) {
-                            var mapId = data.mapid;
-                            var token = data.token;
-                            var layerOptions = {
-                                getTileUrl: function(tile, zoom) {
-                                  var baseUrl = 'https://earthengine.googleapis.com/map';
-                                  var url = [baseUrl, mapId, zoom, tile.x, tile.y].join('/');
-                                  url += '?token=' + token;
-                                  return url;
-                                },
-                                name: layerName,
-                                tileSize: new google.maps.Size(256, 256)
-                            };
-                            var imageMapType = new google.maps.ImageMapType(layerOptions);
-                            overlayMapTypes[index] = imageMapType;
-                        }
-                    }
-                });
-            } else if (overlay.type == 'digitalglobe') {
-                var mapId = overlay.mapID;
-                var token = '{{config.DIGITALGLOBE_API_KEY}}';
-                var layerOptions = {
-                    getTileUrl: function (tile, zoom) {
-                        var url = 'https://{s}.tiles.mapbox.com/v4/{m}/{z}/{x}/{y}.png?access_token=' + token;
-                        return url.replace('{s}', 'api').replace('{m}', mapId).replace('{z}', zoom).replace('{x}', tile.x).replace('{y}', tile.y);
-                    },
-                    name: layerName,
-                    tileSize : new google.maps.Size(256, 256)
-                }
-                var imageMapType = new google.maps.ImageMapType(layerOptions);
-                overlayMapTypes[index] = imageMapType;
-            } else if (overlay.type == 'gibs') {
-                var imageryLayer = overlay.imageryLayer;
-                var date = overlay.date;
-                var layerOptions = {
-                    alt: layerName,
-                    getTileUrl: function(tile, zoom) {
-                        var url = 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{imageryLayer}/default/{date}/GoogleMapsCompatible_Level8/{z}/{y}/{x}.png';
-                        return url.replace('{imageryLayer}', imageryLayer).replace('{date}', date).replace('{z}', zoom).replace('{x}', tile.x).replace('{y}', tile.y);
-                    },
-                    maxZoom: 8,
-                    minZoom: 1,
-                    name: layerName,
-                    tileSize: new google.maps.Size(256, 256)
-                };
-                var imageMapType = new google.maps.ImageMapType(layerOptions);
-                overlayMapTypes[index] = imageMapType;
-            } else if (overlay.type == 'geonetwork') {
-                var layerName = overlay.geonetworkLayer;
-                var geonetworkLayer = L.tileLayer.wms('http://data.fao.org/maps/wms?', {
-                    layers: layerName,
-                    tiled: true,
-                    format: 'image/png',
-                    transparent: true,
-                    maxZoom: 20,
-                    minZoom: 0,
-                    continuousWorld: true,
-                    version: '1.3.0'
-                });
-                overlayMapTypes[index] = geonetworkLayer;
-            } else if (overlay.type == 'dgcs') {
-                var connectid = '{{config.DGCS_CONNECT_ID}}';
-                var url = 'https://services.digitalglobe.com/mapservice/wmsaccess?';
-                url += 'connectid=' + connectid;
-                //
-                var stackingProfile = overlay.dgcsStackingProfile;
-                if (stackingProfile !== undefined) {
-                    url += '&featureProfile=' + stackingProfile;
-                }
-                //
-                var filters = '';
-                if (overlay.dgcsCloudCover != '') {
-                    if (filters != '') filters += 'AND';
-                    filters += "(cloudCover<" + overlay.dgcsCloudCover + ")";
-                }
-                if (overlay.dgcsAcquisitionDateFrom != '') {
-                    if (filters != '') filters += 'AND';
-                    filters += "(acquisitionDate>='" + overlay.dgcsAcquisitionDateFrom + "')";
-                }
-                if (overlay.dgcsAcquisitionDateTo != '') {
-                    if (filters != '') filters += 'AND';
-                    filters += "(acquisitionDate<='" + overlay.dgcsAcquisitionDateTo + "')";
-                }
-                if (overlay.dgcsProductType != '') {
-                    if (filters != '') filters += 'AND';
-                    filters += "(productType='" + overlay.dgcsProductType + "')";
-                }
-                if (filters != '') url += '&Coverage_CQL_Filter=' + filters;
-                //
-                var dgcsLayer = L.tileLayer.wms(url, {
-                    layers: 'DigitalGlobe:Imagery',
-                    format: 'image/png',
-                    style: 'default',
-                    transparent: true,
-                    maxZoom: 20,
-                    minZoom: 0,
-                    continuousWorld: true,
-                    crs: L.CRS.EPSG3857,
-                    version: '1.1.1'
-                });
-                overlayMapTypes[index] = dgcsLayer;
-            } else if (overlay.type == 'planet') {
-                var mosaic_name = overlay.planetMosaicName;
-                var version = overlay.planetApiVersion;
-                var api_key = '{{config.PLANET_API_KEY}}';
-                var layerOptions = {
-                    getTileUrl: function (tile, zoom) {
-                        var url = 'https://tiles.planet.com/basemaps/v1/planet-tiles/{mosaic_name}/gmap/{z}/{x}/{y}.png?api_key=' + api_key;
-                        if (version == 'v0') {
-                            url = 'https://tiles.planet.com/v0/mosaics/{mosaic_name}/{z}/{x}/{y}.png?api_key=' + api_key;
-                        }
-                        return url.replace('{mosaic_name}', mosaic_name).replace('{z}', zoom).replace('{x}', tile.x).replace('{y}', tile.y);
-                    },
-                    name: layerName,
-                    tileSize : new google.maps.Size(256, 256)
-                }
-                var imageMapType = new google.maps.ImageMapType(layerOptions);
-                overlayMapTypes[index] = imageMapType;
-            } else if (overlay.type == 'sepal') {
-                $.ajax({
-                    url: 'https://{{config.SEPAL_HOST}}/processing-recipes/' + overlay.sepalMosaicName,
-                    async: false
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error(jqXHR, textStatus, errorThrown);
-                }).done(function(data, textStatus, jqXHR) {
-                    var dayOfYear = $.dayOfYear(data['targetDate']);
-                    var sceneIds = [];
-                    for (var key in data['sceneAreas']) {
-                        sceneIds = sceneIds.concat(data['sceneAreas'][key]['selection']);
-                    };
-                    var req = {
-                        targetDayOfYearWeight: data['sortWeight'],
-                        bands: overlay.sepalBands, //data['mosaicPreviewBand'],
-                        dataSet: data['sensorGroup'],
-                        sceneIds: sceneIds.join(),
-                        targetDayOfYear: dayOfYear
-                    };
-                    if (data.hasOwnProperty('aoiCode') && data['aoiCode'] != null) {
-                        req['countryIso'] = data['aoiCode'];
-                    } else if (data.hasOwnProperty('polygon')) {
-                        req['polygon'] = data['polygon'];
-                    }
-                    //
-                    $.ajax({
-                        url: 'https://{{config.SEPAL_HOST}}/api/data/mosaic/preview',
-                        type: 'POST',
-                        async: false,
-                        data: $.param(req)
-                    }).fail(function(jqXHR, textStatus, errorThrown) {
-                        console.error(jqXHR, textStatus, errorThrown);
-                    }).done(function(data, textStatus, jqXHR) {
-                        if (data.hasOwnProperty('mapId')) {
-                            var mapId = data.mapId;
-                            var token = data.token;
-                            var layerOptions = {
-                                getTileUrl: function(tile, zoom) {
-                                  var baseUrl = 'https://earthengine.googleapis.com/map';
-                                  var url = [baseUrl, mapId, zoom, tile.x, tile.y].join('/');
-                                  url += '?token=' + token;
-                                  return url;
-                                },
-                                name: layerName,
-                                tileSize: new google.maps.Size(256, 256)
-                            };
-                            var imageMapType = new google.maps.ImageMapType(layerOptions);
-                            overlayMapTypes[index] = imageMapType;
-                        }
-                    });
-                });
-            }
-        }
-
         var plotSelection = function(e) {
             e.preventDefault();
+            $(this).addClass('active').siblings().removeClass('active');
             $('#codeLists button').removeClass('btn-success');
             var plot_id = $(this).attr('data-plot-id');
-            var x_coordinate = $(this).attr('data-x-coordinate');
-            var y_coordinate = $(this).attr('data-y-coordinate');
-            $(this).addClass('active').siblings().removeClass('active');
+            var value = $(this).data('value');
             //
-            $('#codeLists input[name="id"]').val(0);
-            record = $.grep(records, function(e) { return e['plot']['id'] == plot_id; });
-            if (record[0] !== undefined) {
-                var id = record[0]['id'] !== undefined ? record[0]['id'] : 0;
-                $('#codeLists input[name="id"]').val(id);
-
-                var values = record[0]['value'];
-                $.each(values, function(key, value) {
+            if (value !== undefined) {
+                $.each(value, function(key, value) {
                     $('#codeLists button[value="' + value + '"]').addClass('btn-success');
                 });
-
             } else {
                 $('#codeLists select').find('option:eq(0)').prop('selected', true);
                 $('#codeLists .form-group').removeClass('has-danger');
@@ -336,17 +179,33 @@
             $('#selected-plot').text(plot_id);
             $('#list-row').hide();
             $('#codeLists-row').show();
-        }
+        };
 
         function getProject() {
             $.ajax({
                 url: ceoSepalApiUrl + "/project/" + project_id,
                 method: 'get',
                 dataType: 'json'
-            }).success(function(data) {
+            }).done(function(data, textStatus, jqXHR) {
                 // project
                 projectName = data.name;
                 radius = parseFloat(data.radius);
+                {% if session.accessToken -%}
+                    // fusiontable
+                    if (data.fusionTableId !== undefined && data.fusionTableId != null) {
+                        $('#ft-exported').attr('href', 'https://fusiontables.google.com/DataSource?docid=' + data.fusionTableId).show();
+                        $('#ft-clipboard').attr('data-id', data.fusionTableId).show();
+                        new Clipboard('#ft-clipboard', {
+                            text: function(trigger) {
+                                return trigger.getAttribute('data-id');
+                            }
+                        });
+                    } else {
+                        $('#ft-export').show();
+                    }
+                {% else -%}
+                    $('#btnGroupDrop0').addClass('disabled');
+                {% endif -%}
                 // codeLists
                 data.codeLists.forEach(function(codeList) {
                     var name = codeList.name;
@@ -355,18 +214,32 @@
                     element.append(label);
                     codeList.items.forEach(function(item) {
 
-                        var button = $('<button>').attr('type', 'button').addClass('btn btn-secondary submit-btn form-control').text(item.code).attr('value', item.code);
+                        var button = $('<button>').attr('type', 'button').addClass('btn btn-secondary submit-btn form-control').text(item.label).attr('value', item.code);
                         $(button).click(function(e) {
                             e.preventDefault();
 
-                            // records
                             var value = {};
                             value['class'] = $(this).val();
                             var project_id = $.urlParam('id');
                             var plot_id = $('#list a.active').attr('data-plot-id');
                             var YCoordinate = $('#list a.active').attr('data-y-coordinate');
                             var XCoordinate = $('#list a.active').attr('data-x-coordinate');
+
+                            var url = ceoSepalApiUrl + '/record';
+                            var method = 'post';
+                            var evaluated = $('#list a.active').hasClass('evaluated');
+                            var record_id = generateGUID();
+
+                            if (!evaluated) {
+                                $('#list a.active').attr('data-record-id', record_id);
+                            } else {
+                                record_id = $('#list a.active').attr('data-record-id');
+                                url = ceoSepalApiUrl + '/record/' + record_id;
+                                method = 'put';
+                            }
+
                             var record = {
+                                record_id: record_id,
                                 project_id: project_id,
                                 value: value,
                                 plot: {
@@ -374,34 +247,21 @@
                                     YCoordinate: YCoordinate,
                                     XCoordinate: XCoordinate
                                 }
-                            }
-                            var url = ceoSepalApiUrl + '/record';
-                            var method = 'post';
-                            var record_id = $('#codeLists input[name="id"]').val();
-                            if (record_id != 0) {
-                                url = ceoSepalApiUrl + '/record/' + record_id;
-                                method = 'put';
-                            }
-                            $.ajax({
-                                url: url,
-                                method: method,
-                                data: JSON.stringify(record),
-                                contentType: 'application/json;charset=UTF-8'
-                            }).done(function(data) {
-                                updatePlots().done(function(data) {
-                                    //
-                                }).fail(function(jqXHR, textStatus, errorThrown) {
-                                    console.error(jqXHR, textStatus, errorThrown);
-                                });
-                            }).fail(function(jqXHR, textStatus, errorThrown) {
-                                console.error(jqXHR, textStatus, errorThrown);
-                            }).always(function() {
-                                getRecords();
-                                showList();
+                            };
+
+                            queue.enqueue('addOrEditRecord', {
+                                'url': url,
+                                'method': method,
+                                'record': record
+                            }).then(function () {
+                            }, function (e) {
+                                $('#errorModal').modal('show');
                             });
+                            $('#list a[data-plot-id="' + plot_id +'"]').data('value', value).addClass('evaluated').text(plot_id + ' (' + value['class'] + ')');
+                            showList();
 
                         });
-                        $('#codeLists').prepend($('<div class="form-group">').append(button));
+                        $('#codeLists').append($('<div class="form-group">').append(button));
                     });
                 });
 
@@ -420,7 +280,7 @@
                     }
                 ];
 
-                gOptions = {
+                var gOptions = {
                     zoom             : 10,
                     center           : new google.maps.LatLng(0, 0),
                     mapTypeId        : google.maps.MapTypeId.ROADMAP,
@@ -431,20 +291,50 @@
                     rotateControl    : false,
                     fullscreenControl: false,
                     animatedZoom     : false,
-                    backgroundColor  : '#131314'
+                    tilt: 0,
+                    backgroundColor  : '#131314',
+                    draggableCursor  : 'crosshair'
                 };
 
-                var CartoDB_DarkMatterNoLabels = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png', {
+                CartoDB_DarkMatterNoLabels = L.tileLayer('http://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png', {
                     attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
                     subdomains: 'abcd',
-                    maxZoom: 19
+                    maxZoom: 22
                 });
-                lOptions = {
+
+                googleMapsSatelliteForLeaflet = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                    maxZoom: 22,
+                    subdomains: ['mt0','mt1','mt2','mt3']
+                });
+
+                var lOptions = {
                     zoom: 10,
                     center: [0, 0],
                     zoomAnimation: false,
                     zoomControl: false,
-                    layers: [CartoDB_DarkMatterNoLabels]
+                    layers: [CartoDB_DarkMatterNoLabels],
+                    gestureHandling: 'greedy'
+                };
+
+                var pointOptions1 ={
+                    color: 'yellow',
+                    opacity: 0.8,
+                    weight: 2,
+                    strokeColor: 'yellow',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: 'yellow',
+                    fillOpacity: 1
+                };
+
+                var squareOptions1 = {
+                    color: 'yellow',
+                    opacity: 0.8,
+                    weight: 2,
+                    strokeColor: 'yellow',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillOpacity: 0
                 };
 
                 // google maps init
@@ -455,6 +345,8 @@
                 // leaflet init
                 lmap = L.map('lmap', lOptions);
                 var lBounds = [];
+                $('.leaflet-container').css('cursor', 'crosshair');
+                L.DomUtil.addClass(lmap._container, 'crosshair-cursor-enabled');
 
                 gmap.addListener('click', function(e) {
                     removePlots();
@@ -468,40 +360,18 @@
                     li.click(plotSelection);
                     $('#list').append(li);
                     //
-                    var pointOptions1 ={
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillColor: 'yellow',
-                        fillOpacity: 1
-                    }
-                    var squareOptions1 = {
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillOpacity: 0
-                    };
-                    //
                     var gPoint = mapUtils.G.drawPoint(latLng, pointOptions1, gmap);
                     var lPoint = mapUtils.L.drawPoint([lat, lng], pointOptions1, lmap);
                     var gPlot = mapUtils.G.drawSquare(latLng, radius, squareOptions1, gmap);
                     var lPlot = mapUtils.L.cloneSquare(gPlot, squareOptions1, lmap);
                     shapes[id] = [[gPoint, gPlot], [lPlot, lPoint]];
                     //
-                    gPlot.addListener('click', function() {
+                    var plotOnClick = function() {
                         removePlots();
                         $('#list a[data-plot-id=' + id +']').click();
-                    });
-                    lPlot.on('click', function(e) {
-                        removePlots();
-                        $('#list a[data-plot-id=' + id +']').click();
-                    });
+                    };
+                    gPlot.addListener('click', plotOnClick);
+                    lPlot.on('click', plotOnClick);
                     //
                     li.trigger('click');
                 });
@@ -518,66 +388,24 @@
                     li.click(plotSelection);
                     $('#list').append(li);
                     //
-                    var pointOptions1 ={
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillColor: 'yellow',
-                        fillOpacity: 1
-                    }
-                    var squareOptions1 = {
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillOpacity: 0
-                    };
-                    //
                     var gPoint = mapUtils.G.drawPoint(latLng, pointOptions1, gmap);
                     var lPoint = mapUtils.L.drawPoint([lat, lng], pointOptions1, lmap);
                     var gPlot = mapUtils.G.drawSquare(latLng, radius, squareOptions1, gmap);
                     var lPlot = mapUtils.L.cloneSquare(gPlot, squareOptions1, lmap);
                     shapes[id] = [[gPoint, gPlot], [lPlot, lPoint]];
                     //
-                    gPlot.addListener('click', function() {
+                    var plotOnClick = function() {
                         removePlots();
                         $('#list a[data-plot-id=' + id +']').click();
-                    });
-                    lPlot.on('click', function(e) {
-                        removePlots();
-                        $('#list a[data-plot-id=' + id +']').click();
-                    });
+                    };
+                    gPlot.addListener('click', plotOnClick);
+                    lPlot.on('click', plotOnClick);
                     //
                     li.trigger('click');
                 });
 
                 // plots
                 if (data.plots !== undefined && data.plots.length != 0) {
-                    //
-                    var pointOptions1 ={
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillColor: 'yellow',
-                        fillOpacity: 1
-                    }
-                    var squareOptions1 = {
-                        color: 'yellow',
-                        opacity: 0.8,
-                        weight: 2,
-                        strokeColor: 'yellow',
-                        strokeOpacity: 0.8,
-                        strokeWeight: 2,
-                        fillOpacity: 0
-                    };
                     //
                     data.plots.forEach(function(plot) {
                         var id = plot.id;
@@ -634,10 +462,10 @@
             $.ajax({
                 url: ceoSepalApiUrl + "/record/project_id/" + project_id,
                 method: 'get'
-            }).success(function(data) {
-                records = data;
-                $.each(records, function(key, value) {
-                    $('#list a[data-plot-id="' + value.plot.id +'"]').attr('data-record-id', value.id).addClass('evaluated').text(value.plot.id + ' (' + value.value.class + ')');
+            }).done(function(data, textStatus, jqXHR) {
+                $.each(data, function(key, record) {
+                    $('#list a[data-plot-id="' + record.plot.id +'"]').attr('data-record-id', record.id).data('value', record.value);
+                    $('#list a[data-plot-id="' + record.plot.id +'"]').addClass('evaluated').text(record.plot.id + ' (' + record.value.class + ')');
                 });
             }).fail(function(jqXHR, textStatus, errorThrown) {
                 console.error(jqXHR, textStatus, errorThrown);
@@ -645,9 +473,6 @@
         }
 
         getProject();
-
-        var records = {};
-        var record_id = $(this).attr('data-id');
 
         function prevEvaluation() {
             var prev = null;
@@ -712,58 +537,54 @@
             });
         }
 
-        function updatePlots() {
-            var plots = [];
-            var project_id = $.urlParam('id');
-            $('#list a').each(function(index) {
-                plots.push({
-                    XCoordinate: $(this).attr('data-x-coordinate'),
-                    YCoordinate: $(this).attr('data-y-coordinate'),
-                    id: $(this).attr('data-plot-id')
-                });
-            });
-            return $.ajax({
-                url: ceoSepalApiUrl + "/project/" + project_id,
-                method: 'patch',
-                data: JSON.stringify({
-                    'plots': plots
-                }),
-                contentType: 'application/json;charset=UTF-8'
-            });
-        }
-
         $('#delete-btn').click(function(e) {
             e.preventDefault();
-            var record_id = $('#list a.active').attr('data-record-id');
-            $.ajax({
-                url: ceoSepalApiUrl + '/record/' + record_id,
-                method: 'delete',
-                contentType: 'application/json;charset=UTF-8'
-            }).done(function(data) {
-                removeCurrentPlot();
-                $('#list a.active').remove();
-                updatePlots().done(function(data) {
-                    //
-                }).fail(function(jqXHR, textStatus, errorThrown) {
-                    console.error(jqXHR, textStatus, errorThrown);
-                });
-            }).fail(function(jqXHR, textStatus, errorThrown) {
-                console.error(jqXHR, textStatus, errorThrown);
-                removeCurrentPlot();
-            }).always(function() {
-                getRecords();
-                showList();
+            queue.enqueue('deleteRecord', {
+                'record_id': $('#list a.active').attr('data-record-id')
+            }).then(function () {
+            }, function (e) {
+                $('#errorModal').modal('show');
             });
+            removeCurrentPlot();
+            showList();
         });
 
-        $('#export-csv').click(function(e) {
+        var exportCsv = $('#export-csv');
+        queue.addEmptyListener(function(empty) {
+            exportCsv.toggleClass('disabled', !empty);
+        });
+        exportCsv.click(function(e) {
             e.preventDefault();
             window.location.href = ceoSepalApiUrl + '/project/' + project_id + '/export';
         });
 
-        $('#export-fusiontables').click(function(e) {
+        $('#ft-export').click(function(e) {
             e.preventDefault();
-            window.location.href = ceoSepalApiUrl + '/project/' + project_id + '/export?type=fusiontables';
+            $.ajax({
+                url: ceoSepalApiUrl + '/project/' + project_id + '/export?type=fusiontables',
+                type: 'GET',
+                crossDomain : true
+            }).fail(function(jqXHR, textStatus, errorThrown) {
+                console.error(jqXHR, textStatus, errorThrown);
+                alert('ko');
+            }).done(function(data, textStatus, jqXHR) {
+                $('#ftModal').modal('show');
+                // fusiontable
+                if (data.fusionTableId !== undefined && data.fusionTableId != null) {
+                    $('#ft-exported').attr('href', 'https://fusiontables.google.com/DataSource?docid=' + data.fusionTableId).show();
+                    $('#ft-clipboard').attr('data-id', data.fusionTableId).show();
+                    new Clipboard('#ft-clipboard', {
+                        text: function(trigger) {
+                            return trigger.getAttribute('data-id');
+                        }
+                    });
+                }
+                $('#ft-export').hide();
+            });
+        });
+
+        $('#ft-clipboard').click(function(e) {
+            e.preventDefault();
         });
 
         $('#prev-btn').click(function(e) {
@@ -781,31 +602,62 @@
             showList();
         });
 
-        $('#layer-selector').change(function(e) {
-            gmap.overlayMapTypes.pop();
-            var index = $(this).val();
-            if (index != '') {
-                var overlay = overlays[index];
-                if (overlayMapTypes[index] === undefined) {
-                    addOverlayMapType(overlay, overlayMapTypes, index);
-                }
-                var overlyMapType = overlayMapTypes[index];
-                if (overlay.type != 'geonetwork' && overlay.type != 'dgcs') {
-                    gmap.overlayMapTypes.insertAt(0, overlyMapType);
-                    mapUtils.utils.switchToGoogleMaps(gmap, lmap, 'gmap', 'lmap');
+        function layerSelection(index, refresh) {
+            //gmap.overlayMapTypes.pop();
+            //gmap.overlayMapTypes.setAt(0, null);
+            gmap.overlayMapTypes.clear();
+            lmap.eachLayer(function(layer) {
+                if (layer.options.isOverlay) lmap.removeLayer(layer);
+            });
+            setTimeout(function() {
+                if (typeof index !== 'undefined' && index != '') {
+                    var overlay = overlays[index];
+                    if (refresh == true) overlayMapManager.overlayMapTypes[index] = undefined;
+                    overlayMapManager.addOverlayMapType(overlay, index, function() {
+                        var overlayMapType = overlayMapManager.overlayMapTypes[index];
+                        if (overlay.type != 'geonetwork' && overlay.type != 'dgcs' && overlay.type != 'geoserver') {
+                            gmap.overlayMapTypes.insertAt(0, overlayMapType);
+                            mapUtils.utils.switchToGoogleMaps(gmap, lmap, 'gmap', 'lmap');
+                        } else {
+                            if (overlay.type == 'dgcs') {
+                                $('body .dgcs-iframe').remove();
+                                var src = 'https://services.digitalglobe.com/mapservice/wmsaccess?connectid={{config.DGCS_CONNECT_ID}}';
+                                var iframe = $('<iframe>').addClass('dgcs-iframe').attr('src', src);
+                                $('body').append(iframe);
+                            }
+                            lmap.addLayer(overlayMapType);
+                            overlayMapType.bringToFront();
+                            mapUtils.utils.switchToLeaflet(gmap, lmap, 'gmap', 'lmap');
+                        }
+                    });
                 } else {
-                    if (overlay.type == 'dgcs') {
-                        $('body .dgcs-iframe').remove();
-                        var iframe = $('<iframe>').addClass('dgcs-iframe').attr('src', 'https://services.digitalglobe.com/mapservice/wmsaccess?connectid={{config.DGCS_CONNECT_ID}}');
-                        $('body').append(iframe);
-                    }
-                    if (!lmap.hasLayer(overlyMapType)) lmap.addLayer(overlyMapType);
-                    overlyMapType.bringToFront();
-                    mapUtils.utils.switchToLeaflet(gmap, lmap, 'gmap', 'lmap');
+                    mapUtils.utils.switchToGoogleMaps(gmap, lmap, 'gmap', 'lmap');
                 }
-            } else {
-                mapUtils.utils.switchToGoogleMaps(gmap, lmap, 'gmap', 'lmap');
+            }, 1000);
+        }
+
+        $('#base-selector').change(function(e) {
+            var selectedBase = $(this).val();
+            if (selectedBase == '') {
+                gmap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+                lmap.removeLayer(googleMapsSatelliteForLeaflet);
+                lmap.addLayer(CartoDB_DarkMatterNoLabels);
+            } else if (selectedBase == 'satellite') {
+                gmap.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+                lmap.removeLayer(CartoDB_DarkMatterNoLabels);
+                lmap.addLayer(googleMapsSatelliteForLeaflet);
             }
+        });
+
+        $('#layer-refresher').click(function(e) {
+            e.preventDefault();
+            var selectedLayer = $('#layer-selector option:selected').val();
+            layerSelection(selectedLayer, true);
+        });
+
+        $('#layer-selector').change(function(e) {
+            var selectedLayer = $(this).val();
+            layerSelection(selectedLayer);
         });
 
         $('.chart-btn').click(function(e) {
@@ -816,7 +668,7 @@
             var x_coordinate = active.attr('data-x-coordinate');
             var y_coordinate = active.attr('data-y-coordinate');
             $.ajax({
-                url: geeGatewayApiUrl + '/timeSeriesIndex2',
+                url: geeGatewayApiUrl + '/timeSeriesIndex3',
                 type: 'POST',
                 crossDomain : true,
                 contentType: 'application/json',
@@ -899,5 +751,31 @@
     });
 
 </script>
+
+<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" id="ftModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                The project has been synchronized with Google Fusion Table
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Ok</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true" id="errorModal">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-body">
+                Refresh the page
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Ok</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

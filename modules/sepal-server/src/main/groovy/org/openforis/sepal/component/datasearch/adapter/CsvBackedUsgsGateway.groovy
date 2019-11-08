@@ -9,7 +9,6 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
 import static org.openforis.sepal.component.datasearch.adapter.CsvBackedUsgsGateway.Sensor.*
-import static org.openforis.sepal.component.datasearch.api.DataSet.LANDSAT
 import static org.openforis.sepal.util.DateTime.parseDateString
 import static org.openforis.sepal.util.DateTime.startOfDay
 
@@ -74,7 +73,7 @@ class CsvBackedUsgsGateway implements DataSetMetadataGateway {
             readers.each { reader ->
                 reader.eachLine {
                     def scene = toSceneMetaData(sensor, it)
-                    if (scene && scene.acquisitionDate < lastUpdate)
+                    if (scene && scene.updateTime < lastUpdate)
                         return false
                     if (scene)
                         scenes << scene
@@ -88,38 +87,41 @@ class CsvBackedUsgsGateway implements DataSetMetadataGateway {
 
     private SceneMetaData toSceneMetaData(Sensor sensor, data) {
         try {
-            if (isSceneIncluded(data))
+            if (isSceneIncluded(data)) {
+                def sensorId = data.COLLECTION_CATEGORY == 'T2' ? sensor.name() + '_T2' : sensor.name()
                 return new SceneMetaData(
                         id: data.sceneID,
-                        dataSet: LANDSAT,
+                        source: 'LANDSAT',
                         sceneAreaId: "${data.path}_${data.row}",
-                        sensorId: sensor.name(),
+                        dataSet: sensorId,
                         acquisitionDate: parseDateString(data.acquisitionDate),
                         cloudCover: cloudCover(sensor, data),
                         coverage: 100,
-                        sunAzimuth: data.sunAzimuth.toDouble(),
-                        sunElevation: data.sunElevation.toDouble(),
+                        sunAzimuth: data.sunAzimuth ? data.sunAzimuth.toDouble() : 0d,
+                        sunElevation: data.sunAzimuth ? data.sunElevation.toDouble() : 0d,
                         browseUrl: URI.create(data.browseURL),
                         updateTime: parseDateString(data.dateUpdated)
                 )
-        } catch (Exception ignore) {
+            }
+        } catch (Exception e) {
+            LOG.error("${e.message}: ${data}")
         }
         return null
     }
 
     private Double cloudCover(Sensor sensor, data) {
-        def result = data.cloudCoverFull.toDouble() as Double
+        def result = data.cloudCover.toDouble() as Double
         // LANDSAT_7 with SLC off always miss about 22% of its data. Consider that cloud cover.
-        if (result && sensor == LANDSAT_7 && data.SCAN_GAP_INTERPOLATION)
+        if (result && sensor == LANDSAT_7 && data.SCAN_GAP_INTERPOLATION != '-1')
             result = Math.min(100, result + 22)
         return result
     }
 
     private boolean isSceneIncluded(data) {
         def prefix = (data.sceneID as String).substring(0, 3)
-        return data.COLLECTION_CATEGORY == 'T1' &&
-                data.dayOrNight == 'DAY' &&
-                data.cloudCoverFull.toDouble() >= 0d &&
+        return data.COLLECTION_CATEGORY in ['T1', 'T2'] &&
+                data.dayOrNight.toUpperCase() == 'DAY' &&
+                data.cloudCover.toDouble() >= 0d &&
                 prefix in ['LT4', 'LT5', 'LE7', 'LC8']
     }
 

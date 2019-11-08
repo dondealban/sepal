@@ -1,0 +1,12 @@
+/* 
+    Note: overflow hidden is necessary to remove 
+    the scary bug causing the entire viewport to 
+    shift left during the "in" animation
+*/
+
+.sections {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+}

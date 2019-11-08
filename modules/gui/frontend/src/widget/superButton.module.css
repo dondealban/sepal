@@ -1,0 +1,92 @@
+.container {
+    margin-bottom: .5rem;
+    border-radius: var(--button-border-radius);
+}
+
+.container.expanded {
+    border-color: var(--wireframe-color) !important;
+}
+
+.container:last-child {
+    margin-bottom: 0;
+}
+
+.main {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* absolutely positioned click target is needed
+to prevent click-through from click-hold buttons */
+.main .clickTarget {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: var(--button-border-radius);
+}
+
+.info {
+    padding: .25rem .5rem;
+    pointer-events: none; /* avoid interfering with click target */
+    overflow: hidden;
+}
+
+.info > * {
+    white-space: normal;
+    word-break: break-word;
+    overflow: hidden;
+}
+
+.expanded .info > * {
+    white-space: nowrap;
+    word-break: normal;
+}
+
+.description {
+    font-size: .9rem;
+    white-space: normal;
+    word-wrap: break-word;
+}
+
+.timestamp {
+    font-size: small;
+    margin-right: 2rem;
+    color: gray;
+}
+
+@media screen and (max-width: 600px) {
+    .timestamp {
+        font-size: small;
+        margin-right: .5rem;
+        color: gray;
+    }
+}
+
+.buttons {
+    flex-shrink: 0;
+    padding: .25rem .5rem;
+}
+
+.extra {
+    border-top: var(--wireframe);
+    margin: 0 .5rem;
+    padding: .25rem 0;
+    cursor: default;
+    pointer-events: all;
+}
+
+.draggable {
+    cursor: grab;
+}
+
+.dragging {
+    opacity: .25;
+}
+
+.dragHandle {
+    cursor: grab;
+}

@@ -5,7 +5,6 @@ echo
 echo "*****************************"
 echo "*** Installing OpenSARKit ***"
 echo "*****************************"
-echo "Version: 2017-07-06"
 OSK_HOME=/usr/local/lib/osk
 mkdir -p ${OSK_HOME}
 OPENSARKIT=${OSK_HOME}/opensarkit
@@ -14,6 +13,9 @@ cd ${OSK_HOME}
 
 echo -ne " Getting the Open Foris SAR Toolkit ..."
 git clone https://github.com/openforis/opensarkit
+cd opensarkit
+git fetch
+git checkout s1_fixes
 
 echo "OPENSARKIT=${OSK_HOME}/opensarkit" | tee -a /etc/environment
 echo "OST_DB=${OSK_HOME}/Database/OFST_db.sqlite" | tee -a /etc/environment
@@ -32,5 +34,5 @@ done
 cd /
 
 mkdir -p ${OSK_HOME}/Database/
-wget https://www.dropbox.com/s/qvujm3l0ba0frch/OFST_db.sqlite?dl=0
+wget -nv https://www.dropbox.com/s/qvujm3l0ba0frch/OFST_db.sqlite?dl=0
 mv OFST_db.sqlite?dl=0 ${OSK_HOME}/Database/OFST_db.sqlite

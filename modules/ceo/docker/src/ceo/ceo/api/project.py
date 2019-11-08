@@ -10,6 +10,7 @@ from .. import mongo
 import uuid
 
 from ..common.utils import import_sepal_auth, requires_auth, propertiesFileToDict, allowed_file, listToCSVRowString, crc32, getTimestamp
+from ..common.fusiontables import getTable, createTable, importTable, deleteTable, FTException, FTNotFoundException
 
 from werkzeug.utils import secure_filename
 
@@ -26,6 +27,17 @@ def projectById(id=None):
     project = mongo.db.projects.find_one({'id': id}, {'_id': False})
     if not project:
         abort(404)
+    # fusiontables
+    token = session.get('accessToken')
+    fusionTableId = project.get('fusionTableId')
+    if token and fusionTableId:
+        try:
+            tableId = getTable(token, fusionTableId)
+        except FTNotFoundException:
+            project['fusionTableId'] = None
+        except FTException:
+            pass
+    project['recordCount'] = mongo.db.records.find({'project_id': id}).count()
     return jsonify(project), 200
 
 @app.route('/api/project', methods=['GET'])
@@ -37,11 +49,13 @@ def projects():
     skip = request.args.get('skip', 0, int)
     limit = request.args.get('limit', 0, int)
     projects = []
+    otherProjects = []
     if session.get('is_admin'):
         projects = mongo.db.projects.find({}, excludedFields).sort('upload_datetime', -1).skip(skip).limit(limit)
+        #otherProjects = mongo.db.projects.find({'username': { '$ne': session.get('username') }}, excludedFields).sort('upload_datetime', -1).skip(skip).limit(limit)
     else:
         projects = mongo.db.projects.find({'username': session.get('username')}, excludedFields).sort('upload_datetime', -1).skip(skip).limit(limit)
-    return jsonify({'count':projects.count(), 'data':list(projects)}), 200
+    return jsonify({'count': projects.count(), 'projects': list(projects), 'otherProjects': list(otherProjects)}), 200
 
 @app.route('/api/project/<id>/file', methods=['GET'])
 @cross_origin(origins=app.config['CO_ORIGINS'])
@@ -51,7 +65,7 @@ def projectFileById(id=None):
     project = mongo.db.projects.find_one({'id': id}, {'_id': False})
     filename = project['filename']
     name, ext = os.path.splitext(filename)
-    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], name, filename), mimetype='text/xml', attachment_filename=filename, as_attachment=True)
+    return send_file(os.path.join(app.config['UPLOAD_FOLDER'], filename), mimetype='application/zip', attachment_filename=filename, as_attachment=True)
 
 @app.route('/api/project', methods=['POST'])
 @cross_origin(origins=app.config['CO_ORIGINS'])
@@ -61,11 +75,12 @@ def projectAdd():
     # retrieve project data
     username = session.get('username')
     name = request.form.get('name')
-    radius = request.form.get('radius', type=int)
+    radius = request.form.get('radius', 30, type=int)
     overlays = getLayersFromRequest(request)
     projectType = request.form.get('projectType')
     # validation
     if not projectType:
+        print('Project type not provided')
         return 'KO', 400
     else:
         if projectType == PROJECT_TYPE_CEP:
@@ -123,7 +138,8 @@ def projectAdd():
 def projectModify(id=None):
     project = mongo.db.projects.find_one({'id': id}, {'_id': False})
     if not project:
-        return 'Error!', 404
+        return 'Not Found!', 404
+    # security check
     if project['username'] != session.get('username') and not session.get('is_admin'):
         return 'Forbidden!', 403
     # retrieve project data
@@ -164,7 +180,8 @@ def projectModify(id=None):
 def projectChange(id=None):
     project = mongo.db.projects.find_one({'id': id}, {'_id': False})
     if not project:
-        return 'Error!', 404
+        return 'Not Found!', 404
+    # security check
     if project['username'] != session.get('username') and not session.get('is_admin'):
         return 'Forbidden!', 403
     # retrieve project data
@@ -185,9 +202,17 @@ def projectChange(id=None):
 def projectDelete(id=None):
     project = mongo.db.projects.find_one({'id': id}, {'_id': False})
     if not project:
-        return 'Error!', 404
+        return 'Not Found!', 404
+    # security check
     if project['username'] != session.get('username') and not session.get('is_admin'):
         return 'Forbidden!', 403
+    token = session.get('accessToken')
+    fusionTableId = project.get('fusionTableId')
+    if fusionTableId:
+        try:
+            deleteTable(token, fusionTableId)
+        except FTException:
+            pass
     mongo.db.projects.delete_one({'id': id})
     mongo.db.records.delete_many({'project_id': id})
     if project['type'] == PROJECT_TYPE_CEP:
@@ -212,19 +237,26 @@ def projectExport(id=None):
     #
     exportType = request.args.get('type')
     if exportType == 'fusiontables':
-        fusionTables = projectToFusionTables(project, records)
-        googleapis_ft_url = 'https://www.googleapis.com/fusiontables/v2'
-        url = '%s/tables?&access_token=%s' % (googleapis_ft_url, session['accessToken'])
-        headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
-        r = requests.post(url, data=json.dumps(fusionTables), headers=headers)
-        return jsonify(r.json())
+        ft = projectToFusionTables(project)
+        token = session.get('accessToken')
+        try:
+            tableId = createTable(token, ft)
+            if tableId:
+                csvString = projectToCsv(project, records, withHeader=False, withFtLocation=True)
+                isImported = importTable(token, tableId, csvString) if csvString != '' else True
+                if isImported:
+                    project['fusionTableId'] = tableId
+                    mongo.db.projects.update({'id': id}, {'$set': project}, upsert=False)
+                    return jsonify({'fusionTableId': tableId}), 200
+        except FTException as e:
+            return jsonify(str(e)), 500
     else:
         filename = project['name'] + '-' + getTimestamp()
         csvString = projectToCsv(project, records)
         headers = {'Content-disposition': 'attachment; filename=' + filename + '.csv'}
-        return Response(csvString, mimetype="text/csv", headers=headers)
+        return Response(csvString, mimetype='text/csv', headers=headers)
 
-def projectToCsv(project, records):
+def projectToCsv(project, records, withHeader=True, withFtLocation=False):
     csvString = ''
     #
     codeListNames = []
@@ -236,16 +268,16 @@ def projectToCsv(project, records):
             codeListNames.append('confidence')
         objs = project['plots'][0].get('values')
         if objs:
-            csvHeaderData = [o['key'] for o in objs] + codeListNames
-            csvString = listToCSVRowString(csvHeaderData)
+            if withHeader:
+                csvHeaderData = [o['key'] for o in objs] + codeListNames
+                csvString = listToCSVRowString(csvHeaderData)
             for plot in project['plots']:
                 csvRowData = [o['value'] for o in plot['values']]
                 hasRecord = False;
                 for record in records:
                     if record.get('plot'):
-                        print '%s - %s' % (record.get('plot').get('id'), plot['id'])
                         if record.get('plot').get('id') == plot['id']:
-                            hasRecord == True
+                            hasRecord = True
                             values = record['value']
                             for codeListName in codeListNames:
                                 value = values.get(codeListName, '')
@@ -253,45 +285,52 @@ def projectToCsv(project, records):
                 if not hasRecord:
                     for codeListName in codeListNames:
                         csvRowData.append('')
+                if withFtLocation:
+                    csvRowData.append('%s %s' % (plot['values'][1]['value'], plot['values'][2]['value']))
                 csvString += listToCSVRowString(csvRowData)
         else:
-            csvHeaderData = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
-            csvString = listToCSVRowString(csvHeaderData)
+            if withHeader:
+                csvHeaderData = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
+                csvString = listToCSVRowString(csvHeaderData)
             for record in records:
-                csvRowData = []
-                csvRowData.append(record.get('plot').get('id'))
-                csvRowData.append(record.get('plot').get('YCoordinate'))
-                csvRowData.append(record.get('plot').get('XCoordinate'))
-                values = record['value']
+                csvRowData = [
+                    record.get('plot').get('id'),
+                    record.get('plot').get('YCoordinate'),
+                    record.get('plot').get('XCoordinate')
+                ]
                 for codeListName in codeListNames:
-                    value = values.get(codeListName, '')
+                    value = record.get('value').get(codeListName, '')
                     csvRowData.append(value)
+                if withFtLocation:
+                    csvRowData.append('%s %s' % (record.get('plot').get('YCoordinate'), record.get('plot').get('XCoordinate')))
                 csvString += listToCSVRowString(csvRowData)
     if projectType == PROJECT_TYPE_TRAINING_DATA:
-        csvHeaderData = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
-        csvString = listToCSVRowString(csvHeaderData)
+        if withHeader:
+            csvHeaderData = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
+            csvString = listToCSVRowString(csvHeaderData)
         for record in records:
-            csvRowData = []
-            csvRowData.append(record.get('plot').get('id'))
-            csvRowData.append(record.get('plot').get('YCoordinate'))
-            csvRowData.append(record.get('plot').get('XCoordinate'))
-            values = record['value']
+            csvRowData = [
+                record.get('plot').get('id'),
+                record.get('plot').get('YCoordinate'),
+                record.get('plot').get('XCoordinate')
+            ]
             for codeListName in codeListNames:
-                value = values.get(codeListName, '')
+                value = record.get('value').get(codeListName, '')
                 csvRowData.append(value)
+            if withFtLocation:
+                csvRowData.append('%s %s' % (record.get('plot').get('YCoordinate'), record.get('plot').get('XCoordinate')))
             csvString += listToCSVRowString(csvRowData)
     return csvString
 
-def projectToFusionTables(project, records):
+def projectToFusionTables(project):
     ft = {
         'name': project['name'] + '-' + getTimestamp(),
         'columns': [],
         'isExportable': False
     }
     #
-    codeListNames = []
-    for codeList in project['codeLists']:
-        codeListNames.append(codeList['name'])
+    codeListNames = [codeList['name'] for codeList in project['codeLists']]
+    colNames = []
     projectType = project['type']
     if projectType == PROJECT_TYPE_CEP:
         if 'confidence' not in codeListNames:
@@ -299,35 +338,29 @@ def projectToFusionTables(project, records):
         objs = project['plots'][0].get('values')
         if objs:
             colNames = [o['key'] for o in objs] + codeListNames
-            for index, colName in enumerate(colNames):
-                ft['columns'].append({
-                    'columnId': index,
-                    'name': colName,
-                    'type': 'STRING'
-                })
         else:
             colNames = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
-            for index, colName in enumerate(colNames):
-                ft['columns'].append({
-                    'columnId': index,
-                    'name': colName,
-                    'type': 'STRING'
-                })
-    if projectType == PROJECT_TYPE_TRAINING_DATA:
+    elif projectType == PROJECT_TYPE_TRAINING_DATA:
         colNames = ['id', 'YCoordinate', 'XCoordinate'] + codeListNames
-        for index, colName in enumerate(colNames):
-            ft['columns'].append({
-                'columnId': index,
-                'name': colName,
-                'type': 'STRING'
-            })
+    for index, colName in enumerate(colNames):
+        colType = 'NUMBER' if colName == 'class' else 'STRING'
+        ft['columns'].append({
+            'columnId': index,
+            'name': colName,
+            'type': colType
+        })
+    ft['columns'].append({
+        'columnId': len(colNames),
+        'name': 'Location',
+        'type': 'LOCATION'
+    })
     return ft
 
 def saveFileFromRequest(file):
     # project file
     filename = secure_filename(file.filename)
     name, ext = os.path.splitext(filename)
-    uniqueName = name + '--' + crc32(filename)
+    uniqueName = name + '--' + crc32(file)
     uniqueFilename =  uniqueName + ext
     extractDir = os.path.join(app.config['UPLOAD_FOLDER'], uniqueName)
     if not os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], uniqueFilename)):
@@ -394,7 +427,7 @@ def getLayersFromRequest(request):
     overlays = []
     layerType = request.form.getlist('layerType[]')
     layerName = request.form.getlist('layerName[]')
-    # gee
+    # gee (google earth engine)
     collectionName = request.form.getlist('collectionName[]')
     dateFrom = request.form.getlist('dateFrom[]')
     dateTo = request.form.getlist('dateTo[]')
@@ -405,6 +438,7 @@ def getLayersFromRequest(request):
     band2 = request.form.getlist('band2[]')
     band3 = request.form.getlist('band3[]')
     gamma = request.form.getlist('gamma[]')
+    palette = request.form.getlist('palette[]')
     # digitalglobe
     mapID = request.form.getlist('mapID[]')
     # gibs
@@ -419,13 +453,26 @@ def getLayersFromRequest(request):
     dgcsProductType = request.form.getlist('dgcsProductType[]')
     dgcsStackingProfile = request.form.getlist('dgcsStackingProfile[]')
     # planet
-    planetApiVersion = request.form.getlist('planetApiVersion[]')
     planetMosaicName = request.form.getlist('planetMosaicName[]')
     # sepal
     sepalMosaicName = request.form.getlist('sepalMosaicName[]')
     sepalBands = request.form.getlist('sepalBands[]')
+    sepalPansharpening = request.form.getlist('sepalPansharpening[]')
+    # geoserver
+    geoserverUrl = request.form.getlist('geoserverUrl[]')
+    geoserverLayers = request.form.getlist('geoserverLayers[]')
+    geoserverService = request.form.getlist('geoserverService[]')
+    geoserverVersion = request.form.getlist('geoserverVersion[]')
+    geoserverFormat = request.form.getlist('geoserverFormat[]')
+    # geea (google earth engine assets)
+    geeaImageName = request.form.getlist('geeaImageName[]')
+    geeaMin = request.form.getlist('geeaMin[]')
+    geeaMax = request.form.getlist('geeaMax[]')
+    geeaBands = request.form.getlist('geeaBands[]')
+    geeaGamma = request.form.getlist('geeaGamma[]')
+    geeaPalette = request.form.getlist('geeaPalette[]')
     #
-    i1 = i2 = i3 = i4 = i5 = i6 = i7 = -1
+    i1 = i2 = i3 = i4 = i5 = i6 = i7 = i8 = i9 = -1
     for i in range(0, len(layerType)):
         overlay = None
         if layerType[i] == 'gee-gateway':
@@ -440,7 +487,8 @@ def getLayersFromRequest(request):
                 'band1': band1[i1],
                 'band2': band2[i1],
                 'band3': band3[i1],
-                'gamma': gamma[i1]
+                'gamma': gamma[i1],
+                'palette': palette[i1]
             }
         elif layerType[i] == 'digitalglobe':
             i2 += 1
@@ -470,19 +518,39 @@ def getLayersFromRequest(request):
         elif layerType[i] == 'planet':
             i6 += 1
             overlay = {
-                'planetApiVersion': planetApiVersion[i6],
                 'planetMosaicName': planetMosaicName[i6]
             }
         elif layerType[i] == 'sepal':
             i7 += 1
             overlay = {
                 'sepalMosaicName': sepalMosaicName[i7],
-                'sepalBands': sepalBands[i7]
+                'sepalBands': sepalBands[i7],
+                'sepalPansharpening': sepalPansharpening[i7]
+            }
+        elif layerType[i] == 'geoserver':
+            i8 += 1
+            overlay = {
+                'geoserverUrl': geoserverUrl[i8],
+                'geoserverLayers': geoserverLayers[i8],
+                'geoserverService': geoserverService[i8],
+                'geoserverVersion': geoserverVersion[i8],
+                'geoserverFormat': geoserverFormat[i8]
+            }
+        elif layerType[i] == 'geea-gateway':
+            i9 += 1
+            overlay = {
+                'geeaImageName': geeaImageName[i9],
+                'geeaMin': geeaMin[i9],
+                'geeaMax': geeaMax[i9],
+                'geeaBands': geeaBands[i9],
+                'geeaGamma': geeaGamma[i9],
+                'geeaPalette': geeaPalette[i9]
             }
         if overlay:
             overlay['layerName'] = layerName[i]
             overlay['type'] = layerType[i]
-            overlays.append(overlay)
+            cleanOverlay = { k:v.strip() for k, v in overlay.iteritems() }
+            overlays.append(cleanOverlay)
     return overlays
 
 def getCodeListFromRequest(request):
@@ -494,7 +562,7 @@ def getCodeListFromRequest(request):
     codeListCode = request.form.getlist('codeListCode[]')
     for i in range(0, len(codeListCode)):
         codeList['items'].append({
-            'code': codeListCode[i],
-            'label': 'Dummy'
+            'code': i+1,
+            'label': codeListCode[i]
         })
     return codeList

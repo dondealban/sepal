@@ -9,8 +9,8 @@ import org.openforis.sepal.event.HandlerRegistryEventDispatcher
 import org.openforis.sepal.query.HandlerRegistryQueryDispatcher
 import org.openforis.sepal.query.Query
 import org.openforis.sepal.query.QueryHandler
-import org.openforis.sepal.transaction.NullTransactionManager
 import org.openforis.sepal.sql.SqlConnectionManager
+import org.openforis.sepal.transaction.NullTransactionManager
 import org.openforis.sepal.util.ExecutorServiceBasedJobScheduler
 import org.openforis.sepal.util.JobScheduler
 import org.openforis.sepal.util.NamedThreadFactory
@@ -84,7 +84,6 @@ abstract class DataSourceBackedComponent implements Component {
 
         commandDispatcher = new HandlerRegistryCommandDispatcher(connectionManager)
         queryDispatcher = new HandlerRegistryQueryDispatcher()
-
     }
 
     final <R> R submit(Command<R> command) {
@@ -113,20 +112,19 @@ abstract class DataSourceBackedComponent implements Component {
     final schedule(long delay, TimeUnit timeUnit, Command... commands) {
         def schedulers = this.schedulers
         commands.each { command ->
-            schedulers <<
-                    new ExecutorServiceBasedJobScheduler(
-                            Executors.newSingleThreadScheduledExecutor(
-                                    NamedThreadFactory.singleThreadFactory(command.class.simpleName)
-                            )
-                    ).schedule(0, delay, timeUnit) {
-                        def LOG = LoggerFactory.getLogger(command.class)
-                        LOG.debug("Submitting scheduled command: $command")
-                        try {
-                            submit(command)
-                        } catch (Throwable e) {
-                            LOG.error("Error executing scheduled command: $command", e)
-                        }
-                    }
+            schedulers << new ExecutorServiceBasedJobScheduler(
+                    Executors.newSingleThreadScheduledExecutor(
+                            NamedThreadFactory.singleThreadFactory(command.class.simpleName)
+                    )
+            ).schedule(0, delay, timeUnit) {
+                def LOG = LoggerFactory.getLogger(command.class)
+                LOG.debug("Submitting scheduled command: $command")
+                try {
+                    submit(command)
+                } catch (Throwable e) {
+                    LOG.error("Error executing scheduled command: $command", e)
+                }
+            }
         }
     }
 

@@ -2,31 +2,42 @@ package component.processingrecipe
 
 import fake.Database
 import fake.FakeClock
+import groovy.json.JsonSlurper
+import groovy.transform.ToString
 import org.openforis.sepal.component.processingrecipe.ProcessingRecipeComponent
 import org.openforis.sepal.component.processingrecipe.api.Recipe
+import org.openforis.sepal.component.processingrecipe.command.MigrateRecipes
 import org.openforis.sepal.component.processingrecipe.command.RemoveRecipe
 import org.openforis.sepal.component.processingrecipe.command.SaveRecipe
+import org.openforis.sepal.component.processingrecipe.migration.AbstractMigrations
+import org.openforis.sepal.component.processingrecipe.migration.Migrations
 import org.openforis.sepal.component.processingrecipe.query.ListRecipes
 import org.openforis.sepal.component.processingrecipe.query.LoadRecipe
 import org.openforis.sepal.event.SynchronousEventDispatcher
 import org.openforis.sepal.sql.SqlConnectionManager
 import spock.lang.Specification
 
+import static groovy.json.JsonParserType.LAX
+
 abstract class RecipeTest extends Specification {
     final database = new Database(ProcessingRecipeComponent.SCHEMA)
     final eventDispatcher = new SynchronousEventDispatcher()
     final connectionManager = new SqlConnectionManager(database.dataSource)
     final clock = new FakeClock()
+    final migrations = new DelegatingMigrations(new DummyMigrations([:]))
+    final migrationsByRecipeType = [MOSAIC: migrations]
     final component = new ProcessingRecipeComponent(
-            connectionManager,
-            eventDispatcher,
-            clock)
+        connectionManager,
+        eventDispatcher,
+        migrationsByRecipeType,
+        clock)
 
     final testUsername = 'test-user'
 
+
     Recipe saveRecipe(Recipe recipe) {
         component.submit(new SaveRecipe(
-                recipe: recipe
+            recipe: recipe
         ))
         return recipe
     }
@@ -39,19 +50,61 @@ abstract class RecipeTest extends Specification {
         component.submit(new LoadRecipe(id: id))
     }
 
-    List<Recipe> listRecipes(String username) {
+    List<Recipe> listRecipes(String username = testUsername) {
         component.submit(new ListRecipes(username: username))
     }
 
     Recipe newRecipe(Map args = [:]) {
+        def type = args.type ?: (args.contents ? new JsonSlurper(type: LAX).parseText(args.contents).type : 'MOSAIC')
+        if (!type)
+            type = 'MOSAIC'
         new Recipe(
-                id: args.id ?: UUID.randomUUID().toString(),
-                name: args.name ?: 'some-name',
-                type: Recipe.Type.MOSAIC,
-                username: args.username ?: testUsername,
-                contents: args.containsKey('contents') ? args.contents : 'some-contents',
-                creationTime: clock.now(),
-                updateTime: clock.now()
+            id: args.id ?: UUID.randomUUID().toString(),
+            name: args.name ?: 'some-name',
+            type: type,
+            typeVersion: args.typeVersion ?: currentTypeVersion,
+            username: args.username ?: testUsername,
+            contents: args.containsKey('contents') ? args.contents : '"some-contents"',
+            creationTime: clock.now(),
+            updateTime: clock.now()
         )
     }
+
+    int getCurrentTypeVersion() {
+        migrations.currentVersion
+    }
+
+    void withMigrations(Map<Integer, Closure> migrations) {
+        this.migrations.replace(new DummyMigrations(migrations))
+    }
+
+    void withMigrations(Migrations migrations) {
+        this.migrations.replace(migrations)
+    }
+
+    void migrate() {
+        component.submit(new MigrateRecipes(migrations: migrations))
+    }
 }
+
+@ToString
+class DelegatingMigrations implements Migrations {
+    @Delegate private Migrations migrations
+
+    DelegatingMigrations(Migrations migrations) {
+        this.migrations = migrations
+    }
+
+    void replace(Migrations migrations) {
+        this.migrations = migrations
+    }
+}
+
+
+class DummyMigrations extends AbstractMigrations {
+    DummyMigrations(Map<Integer, Closure> migrationsByVersion) {
+        super('MOSAIC')
+        migrationsByVersion.each { addMigration(it.key, it.value) }
+    }
+}
+

@@ -1,25 +1,25 @@
 package integration
 
-import fake.server.GoogleEarthEngineDownloadServer
 import fake.server.GoogleLandsatServer
 import fake.server.S3LandsatServer
 import fake.server.SepalServer
 import groovymvc.Params
 import groovyx.net.http.RESTClient
 import org.openforis.sepal.taskexecutor.Main
+import spock.lang.Ignore
 import spock.lang.Specification
 import spock.util.concurrent.PollingConditions
 import util.Port
 
 import static groovy.json.JsonOutput.toJson
 
+@Ignore
 class Main_Test extends Specification {
     def workingDir = File.createTempDir()
     def downloadDir = File.createTempDir()
     def s3Server = new S3LandsatServer().start() as S3LandsatServer
     def googleLandsatServer = new GoogleLandsatServer().start() as GoogleLandsatServer
     def sepalServer = new SepalServer().start() as SepalServer
-    def googleEarthEngineDownloadServer = new GoogleEarthEngineDownloadServer(workingDir).start() as GoogleEarthEngineDownloadServer
     def port = Port.findFree()
     def propertiesFile = File.createTempFile('task-executor', '.properties')
     def config = [
@@ -30,7 +30,7 @@ class Main_Test extends Specification {
             sepalEndpoint                    : "http://localhost:$sepalServer.port/" as String,
             s3Endpoint                       : "http://localhost:$s3Server.port/" as String,
             googleEndpoint                   : "http://localhost:$googleLandsatServer.port/" as String,
-            googleEarthEngineDownloadEndpoint: "http://localhost:$googleEarthEngineDownloadServer.port/" as String,
+            googleEarthEngineDownloadEndpoint: "http://unused",
             workingDir                       : workingDir.absolutePath,
             username                         : System.getProperty('user.name'),
             port                             : port as String,

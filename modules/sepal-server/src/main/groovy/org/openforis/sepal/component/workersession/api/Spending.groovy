@@ -1,8 +1,8 @@
 package org.openforis.sepal.component.workersession.api
 
-import org.openforis.sepal.util.annotation.ImmutableData
+import groovy.transform.Immutable
 
-@ImmutableData
+@Immutable
 class Spending {
     double monthlyInstanceBudget
     double monthlyInstanceSpending
@@ -10,4 +10,5 @@ class Spending {
     double monthlyStorageSpending
     double storageQuota
     double storageUsed
+    double costPerGbMonth
 }

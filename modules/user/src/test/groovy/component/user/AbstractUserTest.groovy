@@ -1,6 +1,7 @@
 package component.user
 
 import fake.*
+import groovy.json.JsonSlurper
 import org.openforis.sepal.component.user.UserComponent
 import org.openforis.sepal.component.user.adapter.GoogleAccessTokenFileGateway
 import org.openforis.sepal.component.user.adapter.SmtpEmailGateway
@@ -33,6 +34,7 @@ class AbstractUserTest extends Specification {
     final eventDispatcher = new SynchronousEventDispatcher()
     final googleOAuthClient = new FakeGoogleOAuthClient()
     final googleEarthEngineWhitelistChecker = new FakeGoogleEarthEngineWhitelistChecker()
+    final changeListener = new FakeUserChangeListener()
     final clock = new FakeClock()
     final homeDirectory = File.createTempDir()
     final component = new UserComponent(
@@ -45,6 +47,7 @@ class AbstractUserTest extends Specification {
             googleOAuthClient,
             googleEarthEngineWhitelistChecker,
             new GoogleAccessTokenFileGateway(homeDirectory.absolutePath),
+            changeListener,
             clock
     )
 
@@ -115,7 +118,6 @@ class AbstractUserTest extends Specification {
         activeUser(password: password)
     }
 
-
     List<User> listUsers() {
         component.submit(new ListUsers())
     }
@@ -125,11 +127,19 @@ class AbstractUserTest extends Specification {
     }
 
 
-    File googleAccessTokenFile(String username) {
-        new File(new File(homeDirectory, username), '.google-access-token')
+    File earthEngineCredentialsFile(String username) {
+        new File(new File(homeDirectory, "${username}/.config/earthengine"), 'credentials')
+    }
+
+    Map googleTokensFromFile(username) {
+        def file = earthEngineCredentialsFile(username)
+        if (!file.exists())
+            return null
+        return new JsonSlurper().parse(file)
     }
 
     private final username(Map args) {
         args.username ?: testUsername
     }
+
 }

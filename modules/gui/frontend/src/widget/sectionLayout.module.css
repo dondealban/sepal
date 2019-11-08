@@ -1,0 +1,84 @@
+.bar {
+    --bar-border-color:hsla(0, 0%, 100%, .2);
+    padding: 0 .5rem;
+    background-color: var(--bar-background-color);
+    border: 0 solid var(--bar-border-color);
+    color: #ccc;
+    font-size: .9rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: all;
+}
+
+.bar.top {
+    --bar-background-color:hsla(0, 0%, 8%, .7);
+    height: var(--top-bar-height);
+    border-bottom-width: 1px;
+}
+
+.bar.top .label {
+    font-size: .9rem;
+    font-weight: bold;
+    color: #bbb;
+    text-transform: uppercase;
+    letter-spacing: .1rem;
+    margin: 0 1rem 0 .3rem;
+    white-space: nowrap;
+}
+
+.bar.bottom {
+    --bar-background-color:hsla(0, 0%, 0%, .4);
+    min-height: var(--bottom-bar-height);
+    border-top-width: 1px;
+    border-bottom-width: 1px;
+}
+
+.content {
+    --app-menu-padding: .5rem;
+    --toolbar-edge-margin: .5rem;
+    --toolbar-button-size: 2.5rem;
+    --toolbar-clearance: calc(var(--toolbar-edge-margin) + var(--toolbar-button-size));
+    --edgePadding-top: 0rem;
+    --edgePadding-right: 0rem;
+    --edgePadding-bottom: 0rem;
+    --edgePadding-left: 0rem;
+    --menuPadding-left: 0rem;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    transition: padding-left var(--transition-time) ease-in-out var(--transition-delay);
+    padding-top: var(--edgePadding-top);
+    padding-bottom: var(--edgePadding-bottom);
+    padding-left: calc(var(--edgePadding-left) + var(--menuPadding-left));
+    padding-right: var(--edgePadding-right);
+}
+
+.content .content {
+    --margin-top: 0rem;
+}
+
+.content.horizontalPadding {
+    --edgePadding-left: 1.5rem;
+    --edgePadding-right: 1.5rem;
+}
+
+.content.verticalPadding {
+    --edgePadding-top: 2rem;
+    --edgePadding-bottom: .5rem;
+}
+
+.content.menuPadding {
+    --menuPadding-left: var(--menu-container-width);
+}
+
+.content.appMenuPadding {
+    --menuPadding-left: calc(var(--menu-container-width) + var(--app-menu-padding));
+}
+
+@media only screen and (max-width: 500px) {
+    .content.edgePadding {
+        --edgePadding-top: 1.5rem;
+    }
+}

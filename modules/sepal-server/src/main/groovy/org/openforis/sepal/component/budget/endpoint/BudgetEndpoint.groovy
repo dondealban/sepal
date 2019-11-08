@@ -6,7 +6,7 @@ import org.openforis.sepal.component.Component
 import org.openforis.sepal.component.budget.api.Budget
 import org.openforis.sepal.component.budget.api.UserSpendingReport
 import org.openforis.sepal.component.budget.command.UpdateBudget
-import org.openforis.sepal.component.budget.query.GenerateSpendingReport
+import org.openforis.sepal.component.budget.query.LoadSpendingReport
 import org.openforis.sepal.endpoint.InvalidRequest
 
 import static groovy.json.JsonOutput.toJson
@@ -25,7 +25,7 @@ class BudgetEndpoint {
         controller.with {
             get('/budget/report', [ADMIN]) {
                 response.contentType = 'application/json'
-                def report = component.submit(new GenerateSpendingReport())
+                def report = component.submit(new LoadSpendingReport())
                 def map = reportToMap(report)
                 send toJson(map)
             }
@@ -33,22 +33,24 @@ class BudgetEndpoint {
             post('/budget', [ADMIN]) {
                 response.contentType = 'application/json'
                 constrain(UpdateBudget, [
-                        username: [notNull(), notBlank()],
-                        budget  : notNull()
+                    username: [notNull(), notBlank()],
+                    budget: notNull()
                 ])
                 constrain(Budget, [
-                        instanceSpending: Constraints.min(0),
-                        storageSpending : Constraints.min(0),
-                        storageQuota    : Constraints.min(0)
+                    instanceSpending: Constraints.min(0),
+                    storageSpending: Constraints.min(0),
+                    storageQuota: Constraints.min(0)
                 ])
 
+                def budget = new Budget(
+                    instanceSpending: params.required('instanceSpending', double),
+                    storageSpending: params.required('storageSpending', double),
+                    storageQuota: params.required('storageQuota', double)
+                )
+
                 def command = new UpdateBudget(
-                        username: params.required('username', String),
-                        budget: new Budget(
-                                instanceSpending: params.required('monthlyInstanceBudget', double),
-                                storageSpending: params.required('monthlyStorageBudget', double),
-                                storageQuota: params.required('storageQuota', double)
-                        )
+                    username: params.required('username', String),
+                    budget: budget
                 )
                 def errors = bindAndValidate(command)
                 if (errors)
@@ -56,7 +58,7 @@ class BudgetEndpoint {
                 component.submit(command)
                 if (currentUser.username == command.username) // Current user updated
                     response.addHeader('sepal-user-updated', 'true')
-                send toJson(status: 'success', message: 'Budget updated')
+                send toJson(budget)
             }
         }
     }
@@ -69,12 +71,14 @@ class BudgetEndpoint {
 
     private Map spendingAsMap(UserSpendingReport spending) {
         [
-                monthlyInstanceBudget  : spending.instanceBudget,
-                monthlyInstanceSpending: spending.instanceSpending.round(2),
-                monthlyStorageBudget   : spending.storageBudget,
-                monthlyStorageSpending : spending.storageSpending.round(2),
-                storageQuota           : spending.storageQuota,
-                storageUsed            : spending.storageUsage.round(2)
+            current: [
+                instanceSpending: spending.instanceSpending,
+                storageSpending: spending.storageSpending,
+                storageQuota: spending.storageUsage],
+            budget: [
+                instanceSpending: spending.instanceBudget,
+                storageSpending: spending.storageBudget,
+                storageQuota: spending.storageQuota]
         ]
     }
 

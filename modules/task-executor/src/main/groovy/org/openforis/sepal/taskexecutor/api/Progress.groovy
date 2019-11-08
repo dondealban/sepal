@@ -1,8 +1,19 @@
 package org.openforis.sepal.taskexecutor.api
 
-import org.openforis.sepal.util.annotation.ImmutableData
+import groovy.json.JsonOutput
+import groovy.transform.Immutable
 
-@ImmutableData
+@Immutable
 class Progress {
-    String message
+    String defaultMessage
+    String messageKey
+    Map<String, String> messageArgs
+
+    String toJson() {
+        JsonOutput.toJson(
+            defaultMessage: defaultMessage,
+            messageKey: messageKey,
+            messageArgs: messageArgs
+        )
+    }
 }

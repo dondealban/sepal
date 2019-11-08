@@ -14,7 +14,7 @@ class ValidateTokenStatusTest extends AbstractUserTest {
         def tokenStatus = validateToken(token)
 
         then:
-        tokenStatus.user == user
+        tokenStatus.user.id == user.id
         !tokenStatus.expired
     }
 
@@ -31,13 +31,13 @@ class ValidateTokenStatusTest extends AbstractUserTest {
     def 'Given an expired invitation token, when validating token, token status is expired'() {
         def user = inviteUser()
         def token = mailServer.token
-        clock.forward(TokenStatus.MAX_AGE_DAYS, DAYS)
+        clock.forward(TokenStatus.MAX_AGE_DAYS + 1, DAYS)
 
         when:
         def tokenStatus = validateToken(token)
 
         then:
-        tokenStatus.user == user
+        tokenStatus.user.id == user.id
         tokenStatus.expired
     }
 

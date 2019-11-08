@@ -1,0 +1,121 @@
+.container {
+    /* section transitions */
+    --transition-time: 150ms;
+    --transition-delay: 75ms;
+
+    /* footer dimensions */
+    --footer-height: 2rem;
+    --map-overlay-height: 2rem;
+
+    /* bar dimensions */
+    --top-bar-height: 3rem;
+    --bottom-bar-height: 3rem;
+
+    /* menu dimensions */
+    --menu-margin-top: 10rem;
+    --menu-margin-bottom: 5rem;
+    --menu-width: 2.6rem;
+    --menu-handle-width: .6rem;
+
+    position: relative;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* fixed menu */
+.container:not(.floatingMenu) {
+    --menu-position: 0;
+    --menu-container-width: var(--menu-width);
+    --menu-clearance: var(--menu-container-width);
+}
+
+/* floating menu */
+.container.floatingMenu {
+    --menu-position: calc(var(--menu-handle-width) - var(--menu-width));
+    --menu-container-width: 0rem;
+    --menu-clearance: var(--menu-handle-width);
+}
+
+.map {
+    position: absolute;
+    top: 0;
+    bottom: calc(var(--footer-height));
+    left: 0;
+    right: 0;
+    pointer-events: all;
+    z-index: 0;
+}
+
+.menu {
+    position: absolute;
+    left: var(--menu-position);
+    width: var(--menu-width);
+    top: var(--menu-margin-top);
+    bottom: calc(var(--menu-margin-bottom) + var(--map-overlay-height));
+    z-index: 2;
+    transition: all var(--transition-time) ease-in-out var(--transition-delay);
+    pointer-events: none;
+}
+
+.main {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    display: grid;
+    grid-template-rows: 1fr auto auto;
+    grid-template-columns: 1fr;
+    grid-gap: 0;
+    grid-template-areas:
+        'body'
+        'google'
+        'footer';
+    z-index: 1;
+}
+
+.menuContainer {
+    grid-area: menu;
+}
+
+.container:not(.floatingMenu) .menu,
+.menu:hover {
+    left: 0;
+}
+
+.google {
+    grid-area: 'google';
+    width: 100%;
+    height: var(--map-overlay-height);
+    background-color: hsla(0, 0%, 0%, .4);
+}
+
+.footer {
+    grid-area: footer;
+    height: var(--footer-height);
+    pointer-events: all;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+
+.body {
+    grid-area: body;
+    height: 100%;
+    pointer-events: none;
+}
+
+.container:not(.floatingMenu) .body {
+    left: var(--menu-width);
+}
+
+@keyframes footer {
+    from {
+        opacity: 0;
+        transform: translateY(150%);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}

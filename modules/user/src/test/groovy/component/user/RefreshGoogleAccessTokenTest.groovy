@@ -4,9 +4,10 @@ import org.openforis.sepal.command.ExecutionFailed
 import org.openforis.sepal.component.user.adapter.GoogleOAuthException
 import org.openforis.sepal.component.user.adapter.InvalidToken
 import org.openforis.sepal.component.user.command.RefreshGoogleAccessToken
+import org.openforis.sepal.user.User
 
 class RefreshGoogleAccessTokenTest extends AbstractUserTest {
-    def 'When refreshing token, access token is refreshed'() {
+    def 'When refreshing token, access token is refreshed and change listener is notified'() {
         def user = activeUser()
         def tokens = associateGoogleAccount(username: user.username)
 
@@ -16,8 +17,12 @@ class RefreshGoogleAccessTokenTest extends AbstractUserTest {
         then:
         googleOAuthClient.refreshed(tokens)
         loadUser(user.username).googleTokens == googleOAuthClient.tokens
-        googleAccessTokenFile(user.username).exists()
-        googleAccessTokenFile(user.username).text == refreshed.accessToken
+        earthEngineCredentialsFile(user.username).exists()
+        googleTokensFromFile(user.username) == [
+            access_token: refreshed.accessToken,
+            access_token_expiry_date: refreshed.accessTokenExpiryDate
+        ]
+        refreshed
     }
 
     def 'Given an invalid refresh token, when refreshing token, null is returned, and token is removed from user'() {
@@ -31,7 +36,7 @@ class RefreshGoogleAccessTokenTest extends AbstractUserTest {
         then:
         !googleOAuthClient.refreshed(tokens)
         !loadUser(user.username).googleTokens
-        !googleAccessTokenFile(user.username).exists()
+        !earthEngineCredentialsFile(user.username).exists()
     }
 
     def 'Given failing OAuth, when refreshing token, exception is thrown'() {
@@ -46,8 +51,11 @@ class RefreshGoogleAccessTokenTest extends AbstractUserTest {
         thrown ExecutionFailed
         !googleOAuthClient.refreshed(tokens)
         loadUser(user.username).googleTokens == tokens
-        googleAccessTokenFile(user.username).exists()
-        googleAccessTokenFile(user.username).text == tokens.accessToken
+        earthEngineCredentialsFile(user.username).exists()
+        googleTokensFromFile(user.username) == [
+            access_token: tokens.accessToken,
+            access_token_expiry_date: tokens.accessTokenExpiryDate
+        ]
     }
 
     def 'Given no tokens specified, when refreshing token, token for user is refreshed'() {

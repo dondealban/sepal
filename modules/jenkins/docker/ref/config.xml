@@ -17,9 +17,13 @@
   <jdks>
     <jdk>
       <name>java-8-oracle</name>
-      <home>/usr/lib/jvm/java-8-oracle</home>
+      <home>/usr/local/lib/sdkman/candidates/java/current</home>
       <properties/>
     </jdk>
+    <name>java-10-open</name>
+    <home>/usr/local/lib/sdkman/candidates/java/12.0.2.hs-adpt</home>
+    <properties/>
+  </jdk>
   </jdks>
   <viewsTabBar class="hudson.views.DefaultViewsTabBar"/>
   <myViewsTabBar class="hudson.views.DefaultMyViewsTabBar"/>

@@ -3,10 +3,10 @@ package org.openforis.sepal.component.workerinstance.adapter
 import groovy.json.JsonOutput
 import groovy.transform.ToString
 import groovyx.net.http.RESTClient
+import org.openforis.sepal.component.hostingservice.api.InstanceType
 import org.openforis.sepal.component.workerinstance.WorkerInstanceConfig
 import org.openforis.sepal.component.workerinstance.api.InstanceProvisioner
 import org.openforis.sepal.component.workerinstance.api.WorkerInstance
-import org.openforis.sepal.component.hostingservice.api.InstanceType
 import org.openforis.sepal.util.Is
 import org.openforis.sepal.workertype.Image
 import org.openforis.sepal.workertype.WorkerType
@@ -21,10 +21,12 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
     private static final Logger LOG = LoggerFactory.getLogger(this)
     private final WorkerInstanceConfig config
     private final Map<String, InstanceType> instanceTypeById
+    private final String syslogHost
 
-    DockerInstanceProvisioner(WorkerInstanceConfig config, List<InstanceType> instanceTypes) {
+    DockerInstanceProvisioner(WorkerInstanceConfig config, List<InstanceType> instanceTypes, String syslogHost) {
         this.config = config
         this.instanceTypeById = instanceTypes.collectEntries { [(it.id): it] }
+        this.syslogHost = syslogHost
     }
 
     void provisionInstance(WorkerInstance instance) {
@@ -58,40 +60,55 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
     }
 
     private void createContainer(WorkerInstance instance, Image image) {
-        def request = toJson(
-                Image: "$config.dockerRegistryHost/openforis/$image.name:$config.sepalVersion",
-                Tty: true,
-                Cmd: image.runCommand,
-                HostConfig: [
-                        Binds : image.volumes.collect { hostDir, mountedDir ->
-                            "$hostDir:$mountedDir"
-                        },
-                        Links : image.links.collect { "$it.key:$it.value" },
-                        Mounts: [
-                                [
-                                        "Type"        : "tmpfs",
-                                        "Target"      : "/ram",
-                                        "TmpfsOptions": [
-                                                "SizeBytes": (long) instanceTypeById[instance.type].ramBytes / 2
-                                        ]
-                                ]
-                        ]
-                ],
-                ExposedPorts: image.exposedPorts.collectEntries {
-                    ["$it/tcp", [:]]
+        def body = toJson(
+            Image: "$config.dockerRegistryHost/openforis/$image.name:$config.sepalVersion",
+            Tty: true,
+            Cmd: image.runCommand,
+            HostConfig: [
+                Binds: image.volumes.collect { hostDir, mountedDirs ->
+                    if (!(mountedDirs instanceof List))
+                        mountedDirs = [mountedDirs]
+                    return mountedDirs.collect {
+                        "$hostDir:$it"
+                    }
+                }.flatten(),
+                PortBindings: image.publishedPorts.collectEntries { publishedPort, exposedPort ->
+                    ["$exposedPort/tcp", [[HostPort: "$publishedPort"]]]
                 },
-                Env: image.environment.collect {
-                    "$it.key=$it.value"
-                }
+                Links: image.links.collect { "$it.key:$it.value" },
+                Mounts: [
+                    [
+                        "Type": "tmpfs",
+                        "Target": "/ram",
+                        "TmpfsOptions": [
+                            "SizeBytes": (long) instanceTypeById[instance.type].ramBytes / 2
+                        ]
+                    ]
+                ],
+                LogConfig: [
+                    "Type": "syslog",
+                    "Config": [
+                        "syslog-address": "tcp://${syslogHost}:514",
+                        "tag": "{{.Name}}",
+                    ]
+                ]
+            ],
+            ExposedPorts: image.exposedPorts.collectEntries {
+                ["$it/tcp", [:]]
+            },
+            Env: image.environment.collect {
+                "$it.key=$it.value"
+            }
         )
-        LOG.debug("Creating container from image $image on instance $instance")
+        def request = [
+            path: "containers/create",
+            query: [name: image.containerName(instance)],
+            body: body,
+            requestContentType: JSON
+        ]
+        LOG.debug("Creating container from image $image on instance $instance with request $request")
         withClient(instance) {
-            def response = post(
-                    path: "containers/create",
-                    query: [name: image.containerName(instance)],
-                    body: request,
-                    requestContentType: JSON
-            )
+            def response = post(request)
             if (response.data.Warnings)
                 LOG.warn("Warning when creating docker container on $instance: $response.data.Warnings")
         }
@@ -99,16 +116,13 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
     }
 
     private void startContainer(WorkerInstance instance, Image image) {
-        def request = toJson(PortBindings: image.publishedPorts.collectEntries { publishedPort, exposedPort ->
-            ["$exposedPort/tcp", [[HostPort: "$publishedPort"]]]
-        })
-        LOG.debug("Starting container from image $image on instance $instance")
+        def request = [
+            path: "containers/${image.containerName(instance)}/start",
+            requestContentType: JSON
+        ]
+        LOG.debug("Starting container from image $image on instance $instance with request $request")
         withClient(instance) {
-            post(
-                    path: "containers/${image.containerName(instance)}/start",
-                    body: request,
-                    requestContentType: JSON
-            )
+            post(request)
         }
         LOG.debug("Started container from image $image on instance $instance")
     }
@@ -117,21 +131,21 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
         LOG.debug("Waiting until container initialized: Image $image on instance $instance")
         withClient(instance) {
             def response = post(
-                    path: "containers/${image.containerName(instance)}/exec",
-                    body: new JsonOutput().toJson([
-                            AttachStdin : false,
-                            AttachStdout: true,
-                            AttachStderr: true,
-                            Tty         : false,
-                            Cmd         : image.waitCommand
-                    ]),
-                    requestContentType: JSON
+                path: "containers/${image.containerName(instance)}/exec",
+                body: new JsonOutput().toJson([
+                    AttachStdin: false,
+                    AttachStdout: true,
+                    AttachStderr: true,
+                    Tty: false,
+                    Cmd: image.waitCommand
+                ]),
+                requestContentType: JSON
             )
             def execId = response.data.Id
             def startResponse = post(
-                    path: "exec/$execId/start",
-                    body: new JsonOutput().toJson([Detach: false, Tty: true]),
-                    requestContentType: JSON
+                path: "exec/$execId/start",
+                body: new JsonOutput().toJson([Detach: false, Tty: true]),
+                requestContentType: JSON
             )
             LOG.debug("Waiting output:\n${startResponse.data}")
             LOG.debug("Container initialized: Image $image on instance $instance")
@@ -182,7 +196,7 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
             def response = get(path: 'containers/json', query: [all: true])
             def allContainers = response.data
             return allContainers.findAll {
-                it.Names.find { String name -> name.startsWith('/worker-') }
+                it.Names.find { String name -> name.endsWith('.worker') }
             }
         }
     }
@@ -192,8 +206,8 @@ class DockerInstanceProvisioner implements InstanceProvisioner {
     }
 
     private <T> T withClient(
-            WorkerInstance instance,
-            @DelegatesTo(RESTClient) Closure<T> callback) {
+        WorkerInstance instance,
+        @DelegatesTo(RESTClient) Closure<T> callback) {
         withClient(instance.host, callback)
     }
 

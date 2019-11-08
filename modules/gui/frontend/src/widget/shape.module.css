@@ -1,0 +1,128 @@
+.shape {
+    --small-font-size: .8rem;
+    --normal-font-size: .9rem;
+    --large-font-size: 1.0rem;
+    --x-large-font-size: 1.1rem;
+    --xx-large-font-size: 1.4rem;
+    --ratio: 2.2;
+    --extra-padding: 0rem;
+    flex-shrink: 0;
+    position: relative;
+    cursor: pointer;
+    transition: all 100ms ease-in-out;
+    font-size: var(--font-size);
+    line-height: var(--font-size);
+    min-height: fit-content;
+    height: calc(var(--ratio) * var(--font-size));
+    min-width: calc(var(--ratio) * var(--font-size));
+    padding: 0; /* Needed for alignment of shape contents */
+}
+
+@media only screen and (max-width: 500px) {
+    .shape {
+        --ratio: 1.9;
+    }
+}
+
+/* Flex needed for alignment of shape contents */
+.shape {
+    display: flex;
+    align-items: center;
+}
+
+/* alignment */
+
+.shape.alignment-left {
+    justify-content: flex-start;
+}
+
+.shape.alignment-center {
+    justify-content: center;
+}
+
+.shape.alignment-right {
+    justify-content: flex-end;
+}
+
+/* size */
+
+.shape.size-small {
+    --font-size: var(--small-font-size);
+}
+
+.shape.size-normal {
+    --font-size: var(--normal-font-size);
+}
+
+.shape.size-large {
+    --font-size: var(--large-font-size);
+}
+
+.shape.size-x-large {
+    --font-size: var(--x-large-font-size);
+}
+
+.shape.size-xx-large {
+    --font-size: var(--xx-large-font-size);
+}
+
+/* shape */
+
+.shape.shape-rectangle {
+    border-radius: var(--shape-border-radius);
+    padding: calc(var(--air-factor) * .8rem) calc(var(--font-size) * .8 + var(--air-factor) * .5rem);
+}
+
+.shape.shape-pill {
+    border-radius: 500px;
+    min-width: 3.5rem;
+    padding: calc(var(--air-factor) * .7rem) calc(var(--font-size) * .8 + var(--air-factor) * .5rem);
+}
+
+.shape.shape-circle {
+    border-radius: 50%;
+}
+
+.shape.shape-xx-large.circle{
+    --ratio: 2.3;
+}
+
+.shape.shape-none {
+    --ratio: 1;
+    padding: 0;
+    border: none !important;
+    background: none !important;
+    line-height: inherit;
+}
+
+/* width */
+
+.shape.width-fit {
+    width: fit-content;
+}
+
+.shape.width-fill {
+    width: 100%;
+}
+
+/* air */
+
+.shape.air-normal {
+    --air-factor: 0;
+}
+
+.shape.air-more {
+    --air-factor: 1;
+}
+
+/* contents */
+.shape > * {
+    white-space: nowrap;
+    position: relative;
+}
+
+/* spacing between icon and label */
+.shape > .contents > * + * {
+    margin-left: .5rem;
+}
+

@@ -1,0 +1,10 @@
+.terminal {
+    height: 100%;
+    width: 100%;
+    pointer-events: all;
+}
+
+ /* [HACK] Fix forced vertical scrollbar */
+:global .xterm-viewport {
+    overflow-y: auto !important;
+}

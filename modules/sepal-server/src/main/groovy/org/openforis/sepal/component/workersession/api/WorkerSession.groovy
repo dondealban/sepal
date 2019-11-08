@@ -1,10 +1,10 @@
 package org.openforis.sepal.component.workersession.api
 
-import org.openforis.sepal.util.annotation.ImmutableData
+import groovy.transform.Immutable
 
 import static org.openforis.sepal.component.workersession.api.WorkerSession.State.*
 
-@ImmutableData
+@Immutable
 class WorkerSession {
     String id
     State state
@@ -12,6 +12,7 @@ class WorkerSession {
     String workerType
     String instanceType
     WorkerInstance instance
+    Date earliestTimeoutTime
     Date creationTime
     Date updateTime
 
@@ -43,6 +44,7 @@ class WorkerSession {
                 workerType: workerType,
                 instanceType: instanceType,
                 instance: instance,
+                earliestTimeoutTime: earliestTimeoutTime,
                 creationTime: creationTime,
                 updateTime: updateTime
         )
@@ -56,6 +58,21 @@ class WorkerSession {
                 workerType: workerType,
                 instanceType: instanceType,
                 instance: instance,
+                earliestTimeoutTime: earliestTimeoutTime,
+                creationTime: creationTime,
+                updateTime: updateTime
+        )
+    }
+
+    WorkerSession withEarliestTimeoutTime(Date time) {
+        new WorkerSession(
+                id: id,
+                state: state,
+                username: username,
+                workerType: workerType,
+                instanceType: instanceType,
+                instance: instance,
+                earliestTimeoutTime: time,
                 creationTime: creationTime,
                 updateTime: updateTime
         )

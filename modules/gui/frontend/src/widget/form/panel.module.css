@@ -1,0 +1,105 @@
+.panel {
+    --margin-left: calc(var(--menu-clearance) + .5rem);
+    --margin-right: 3.5rem;
+    --margin-top: .5rem;
+    --margin-bottom: .5rem;
+    --header-padding: .5rem .8rem;
+    --content-padding: 1.5rem .8rem;
+    --padding-panel-buttons: .5rem;
+    --header-color: #e8e8e8;
+    width: calc(100% - var(--margin-left) - var(--margin-right));
+    background-color: var(--panel-default-background-color);
+    border: var(--selected-panel-border-width) solid var(--selected-panel-border-color);
+    border-radius: .5rem;
+    pointer-events: all;
+    z-index: 3;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: width var(--transition-time) ease-in-out var(--transition-delay);
+}
+
+.panel.top {
+    position: absolute;
+    top: var(--margin-top);
+}
+
+.panel.bottom {
+    position: absolute;
+    bottom: var(--margin-bottom);
+}
+
+.panel.right {
+    position: absolute;
+    right: var(--margin-right);
+}
+
+.panel.center {
+    position: absolute;
+    top: .5rem;
+    bottom: .5rem;
+    left: calc(var(--menu-clearance) + .5rem);
+    right: .5rem;
+    margin: auto;
+}
+
+.panel.modal {
+    left: .5rem;
+    right: .5rem;
+    top: .5rem;
+    bottom: .5rem;
+    max-height: calc(100% - 1rem);
+    max-width: calc(100% - 1rem);
+}
+
+.panel.inline {
+    position: relative;
+}
+
+/* Header */
+
+.header {
+    flex-grow: 0;
+    flex-shrink: 0;
+    font-size: .9rem;
+    font-family: var(--header-font-family);
+    text-transform: uppercase;
+    color: var(--header-color);
+    padding: var(--header-padding);
+    border-bottom: var(--wireframe);
+    display: flex;
+    justify-content: space-between;
+}
+
+.header > div > *:first-child {
+    margin-right: .5rem;
+}
+
+/* Content */
+
+.content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: var(--content-padding);
+    overflow: hidden;
+}
+
+.spinner {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    background-color: hsla(0, 0%, 0%, .3);    
+}
+
+.spinner svg {
+    color: #ccc;
+    font-size: 2.5rem;
+}

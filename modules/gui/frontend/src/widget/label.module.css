@@ -1,0 +1,40 @@
+.label {
+    --label-color: #b0b0b0;
+    --normal-font-size: .8rem;
+    --large-font-size: .9rem;
+    margin: 0;
+    margin-bottom: .5rem;
+    font-size: var(--font-size);
+    font-weight: 500;
+    text-transform: uppercase;
+    color: var(--label-color);
+}
+
+.label.normal {
+    --font-size: var(--normal-font-size);
+}
+
+.label.large {
+    --font-size: var(--large-font-size);
+}
+
+.label.disabled {
+    opacity: .3;
+}
+
+.label.left {
+    text-align: left;
+}
+
+.label.center {
+    text-align: center;
+}
+
+.label.right {
+    text-align: right;
+}
+
+.label .info {
+    cursor: help;
+    margin-left: .5rem;
+}

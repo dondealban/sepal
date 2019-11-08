@@ -1,18 +1,21 @@
 package org.openforis.sepal.component.datasearch.api
 
-import org.openforis.sepal.util.annotation.Data
+import groovy.transform.Canonical
 
-@Data
+@Canonical
 class PreselectedScenesMapQuery {
-    DataSet dataSet
+    String source
     List<String> sceneIds
     Aoi aoi
     int targetDayOfYear
     double targetDayOfYearWeight
     double shadowTolerance
+    double hazeTolerance
+    double greennessWeight
     boolean medianComposite
     boolean brdfCorrect
-    boolean maskWater
+    boolean maskClouds
     boolean maskSnow
     List<String> bands
+    boolean panSharpening
 }

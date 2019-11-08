@@ -1,0 +1,65 @@
+
+.layout {
+    overflow: hidden;
+}
+
+.layout > .content {
+    display: flex;
+    overflow: hidden;
+}
+
+.layout > .content > * {
+    margin-bottom: var(--vertical-spacing);
+}
+
+.layout.horizontal {
+    display: flex;
+    flex-direction: column;
+    margin-right: calc(-1 * var(--horizontal-spacing));
+}
+
+.layout.loose {
+    --vertical-spacing: 3rem;
+    --horizontal-spacing: 1.5rem;
+}
+
+.layout.normal {
+    --vertical-spacing: 2rem;
+    --horizontal-spacing: 1rem;
+}
+
+.layout.compact {
+    --vertical-spacing: 1rem;
+    --horizontal-spacing: .5rem;
+}
+
+.layout.none {
+    --vertical-spacing: 0rem;
+    --horizontal-spacing: 0rem;
+}
+
+.layout.vertical > .content > *:last-child {
+    margin-bottom: 0;
+}
+
+.layout.vertical > .content {
+    flex-direction: column;
+}
+
+.layout.horizontal > .content {
+    width: 100%;
+    height: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center; /* required */
+    margin-bottom: calc(-1 * var(--vertical-spacing));
+}
+
+.layout.horizontal.nowrap > .content {
+    flex-wrap: nowrap;
+}
+
+.layout.horizontal > .content > * {
+    margin-right: var(--horizontal-spacing);
+}

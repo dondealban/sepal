@@ -4,7 +4,6 @@ import org.openforis.sepal.component.budget.api.BudgetRepository
 import org.openforis.sepal.component.budget.api.UserSpendingReport
 import org.openforis.sepal.component.budget.internal.InstanceSpendingService
 import org.openforis.sepal.component.budget.internal.StorageUseService
-import org.openforis.sepal.component.workersession.api.UserSessionReport
 import org.openforis.sepal.query.Query
 import org.openforis.sepal.query.QueryHandler
 import org.openforis.sepal.user.UserRepository
@@ -28,8 +27,8 @@ class GenerateSpendingReportHandler implements QueryHandler<Map<String, UserSpen
         this.userRepository = userRepository
     }
 
-    Map<String, UserSessionReport> execute(GenerateSpendingReport query) {
-        def reports = [:]
+    Map<String, UserSpendingReport> execute(GenerateSpendingReport query) {
+        def reports = [:] as Map<String, UserSpendingReport>
         userRepository.eachUsername { username ->
             def report = userSpendingReportGenerator.execute(new GenerateUserSpendingReport(username: username))
             reports[username] = report

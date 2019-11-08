@@ -28,7 +28,7 @@ class UserEndpoint {
             def nameConstraints = [notBlank(), maxLength(1000)]
             def emailConstraints = [notBlank(), email()]
             def organizationConstraints = [maxLength(1000)]
-            def passwordConstraints = custom { it ==~ /^.{6,100}$/ }
+            def passwordConstraints = custom { it ==~ /^.{8,100}$/ }
 
             constrain(InviteUser, [
                     invitedUsername: usernameConstraints,
@@ -60,6 +60,11 @@ class UserEndpoint {
                 def user = component.submit(new Authenticate(username, password))
                 if (user) {
                     LOG.info('Authenticated ' + user)
+                    component.submit(
+                            new RefreshGoogleAccessToken(
+                                    username: user.username,
+                                    tokens: user.googleTokens
+                            ))
                     send toJson(user)
                 } else {
                     LOG.info('Authentication failed: ' + params.user)
@@ -171,18 +176,18 @@ class UserEndpoint {
 
             post('/invite', [ADMIN]) {
                 response.contentType = 'application/json'
-                def command = new InviteUser()
+                def command = new InviteUser(invitedUsername: params.username?.toLowerCase())
                 def errors = bindAndValidate(command)
                 if (errors)
                     throw new InvalidRequest(errors)
                 command.username = sepalUser.username
-                component.submit(command)
-                send toJson([status: 'success', message: 'Invitation sent'])
+                def user = component.submit(command)
+                send toJson(user)
             }
 
             post('/delete', [ADMIN]) {
                 response.contentType = 'application/json'
-                def command = new DeleteUser(username: params.required('username', String))
+                def command = new DeleteUser(username: params.required('username', String).toLowerCase())
                 component.submit(command)
                 send toJson([status: 'success', message: 'User deleted'])
             }

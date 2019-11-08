@@ -11,6 +11,8 @@ import org.openforis.sepal.component.processingrecipe.query.LoadRecipe
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+import java.util.zip.InflaterInputStream
+
 import static groovy.json.JsonOutput.toJson
 
 class ProcessingRecipeEndpoint {
@@ -24,12 +26,11 @@ class ProcessingRecipeEndpoint {
     void registerWith(Controller controller) {
         controller.with {
             post('/processing-recipes/{id}') {
-                def contents = params.data
-                def contentsMap = fromJson(contents)
+                def contents = new InflaterInputStream(request.inputStream).text
                 component.submit(new SaveRecipe(new Recipe(
                         id: params.id,
-                        name: contentsMap.name,
-                        type: contentsMap.type as Recipe.Type,
+                        name: params.name,
+                        type: params.type,
                         username: sepalUser.username,
                         contents: contents
                 )))
@@ -45,7 +46,7 @@ class ProcessingRecipeEndpoint {
                 def recipe = component.submit(new LoadRecipe(params.id))
                 if (!recipe)
                     return halt(404)
-                if (recipe.username != sepalUser.username) {
+                if (recipe.username != sepalUser.username && !sepalUser.admin) {
                     LOG.warn("User $sepalUser.username tries to load recipe from other user: $recipe")
                     return halt(404)
                 }
@@ -64,7 +65,7 @@ class ProcessingRecipeEndpoint {
             [
                     id          : it.id,
                     name        : it.name,
-                    type        : it.type.name(),
+                    type        : it.type,
                     creationTime: it.creationTime,
                     updateTime  : it.updateTime
             ]

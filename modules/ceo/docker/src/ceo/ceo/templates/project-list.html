@@ -53,9 +53,9 @@
             $.ajax({
                 url: ceoSepalApiUrl + '/project',
                 dataType: 'json'
-            }).success(function(data) {
-                if (data !== undefined && data.data !== undefined) {
-                    $(data.data).each(function() {
+            }).done(function(data, textStatus, jqXHR) {
+                if (data !== undefined && data.projects !== undefined) {
+                    $(data.projects).each(function() {
                         var project_id = this.id;
                         var projectType = this.type;
                         var tr = $('<tr>');
@@ -66,7 +66,7 @@
                         tr.append($('<td>').text(this.username));
                         tr.append($('<td>').append($('<a>').attr('href', 'project-edit?id=' + project_id).addClass('btn btn-outline-warning').text('edit')));
                         if (projectType == 'CEP') {
-                            tr.append($('<td>').append($('<a>').attr('href', 'collect-form?id=' + project_id).addClass('btn btn-outline-info').text('collect')));
+                            tr.append($('<td>').append($('<a>').attr('href', 'collect-cep?id=' + project_id).addClass('btn btn-outline-info').text('collect')));
                         } else if (projectType == 'TRAINING-DATA') {
                             tr.append($('<td>').append($('<a>').attr('href', 'collect-training-data?id=' + project_id).addClass('btn btn-outline-info').text('collect')));
                         }
@@ -85,12 +85,12 @@
                             url: ceoSepalApiUrl + '/project/' + project_id,
                             method: 'delete',
                             contentType: 'application/json;charset=UTF-8'
-                        }).success(function(data) {
+                        }).done(function(data, textStatus, jqXHR) {
                             window.location.reload();
                         }).fail(function(jqXHR, textStatus, errorThrown) {
                             console.error(jqXHR, textStatus, errorThrown);
                         });
-                    })
+                    });
                 }
             }).fail(function(jqXHR, textStatus, errorThrown) {
                 console.error(jqXHR, textStatus, errorThrown);

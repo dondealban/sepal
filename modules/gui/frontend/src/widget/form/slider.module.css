@@ -1,0 +1,144 @@
+.wrapper {
+    --container-height: 2rem;
+    --slider-height: 1px;
+    --handle-height: 1.5rem;
+    --handle-width: 1.5rem;
+    --handle-radius: 100%;
+    --axis-color: hsl(0, 0%, 40%);
+    --label-color: hsl(0, 0%, 60%);
+    --tick-height: 1rem;
+
+    --cursor-color: var(--look-highlight-background-color);
+    --cursor-hover-color: var(--look-highlight-hover-background-color);
+    --cursor-dragging-color: var(--look-highlight-active-background-color);
+    --cursor-preview-color: hsla(var(--look-highlight-h), var(--look-highlight-s), var(--look-highlight-l), .5);
+    --range-color: var(--look-highlight-background-color);
+
+    position: relative;
+}
+
+.disabled {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    background-color: var(--panel-default-overlay-color);
+    z-index: 10;
+}
+
+.container {
+    width: 100%;
+    height: var(--container-height);
+    padding: 1px calc(var(--handle-width) / 2) 0;
+    overflow: hidden;
+}
+
+.slider {
+    position: relative;
+    width: 100%;
+    height: var(--slider-height);
+}
+
+.clickTarget {
+    position: absolute;
+    top: calc(-.5 * var(--handle-height));
+    bottom: calc(-1.5 * var(--handle-height));
+    left: 0;
+    right: 0;
+    cursor: pointer;
+    z-index: 1;
+}
+
+.axis {
+    background-color: var(--axis-color);
+    height: 1px;
+}
+
+.tick {
+    position: absolute;
+    background-color: var(--axis-color);
+    width: 1px;
+    top: 0;
+    bottom: calc(-.5 * var(--tick-height));
+}
+
+.info {
+    font-size: 0.8rem;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.label {
+    position: absolute;
+    width: 2rem;
+    font-size: .75rem;
+    color: var(--label-color);
+    text-align: center;
+    margin-left: -1rem;
+    margin-top: .7rem;
+    user-select: none;
+}
+
+.alignment.left {
+    text-align: left;
+}
+
+.alignment.center {
+    text-align: center;
+}
+
+.alignment.right {
+    text-align: right;
+}
+
+.cursor {
+    position: absolute;
+    top: calc((var(--handle-height) - var(--slider-height)) / -2);
+    margin-left: calc((var(--handle-width)) / -2);
+    height: var(--handle-height);
+    width: var(--handle-width);
+    border-radius: var(--handle-radius);
+    transform: rotateZ(45deg);
+    border: none;
+}
+
+.cursor.handle {
+    background-color: var(--cursor-color);
+    z-index: 2;
+}
+
+.cursor.handle:hover {
+    background-color: var(--cursor-hover-color);
+    cursor: pointer;
+}
+
+.cursor.handle.dragging {
+    background-color: var(--cursor-dragging-color);
+    cursor: pointer;
+}
+
+.cursor.preview {
+    background-color: var(--cursor-preview-color);
+}
+
+.range {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -1px;
+    bottom: -1px;
+    background-color: var(--range-color);
+}
+
+.cursorOverlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    cursor: pointer;
+    z-index: 100;
+}

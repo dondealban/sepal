@@ -50,11 +50,12 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
                         monthlyStorageBudget: 3,
                         monthlyStorageSpending: 4,
                         storageQuota: 5,
-                        storageUsed: 6
+                        storageUsed: 6,
+                        costPerGbMonth: 0
                 ))
 
         when:
-        get(path: 'sandbox/report')
+        get(path: 'sessions/report')
 
         then:
         status == 200
@@ -63,22 +64,23 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
         sameJson(response.data, [
                 sessions: [[
                         id: 'some-session',
-                        path: 'sandbox/session/some-session',
+                        path: 'sessions/session/some-session',
                         username: testUsername,
                         status: 'STARTING',
                         host: 'some-host',
                         instanceType: [
-                                path: "sandbox/instance-type/$instanceType.id",
+                                path: "sessions/instance-type/$instanceType.id",
                                 id: instanceType.id,
                                 name: instanceType.name,
                                 description: instanceType.description,
                                 hourlyCost: instanceType.hourlyCost
                         ],
+                        earliestTimeoutHours: 0.0,
                         creationTime: '2016-01-01T00:00:00',
                         costSinceCreation: 0.1 * 2 * 24 // hourly cost * two days
                 ]],
                 instanceTypes: [[
-                        path: "sandbox/instance-type/$instanceType.id",
+                        path: "sessions/instance-type/$instanceType.id",
                         id: instanceType.id,
                         name: instanceType.name,
                         description: instanceType.description,
@@ -90,12 +92,13 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
                         monthlyStorageBudget: 3d,
                         monthlyStorageSpending: 4d,
                         storageQuota: 5d,
-                        storageUsed: 6d
+                        storageUsed: 6d,
+                        costPerGbMonth: 0d
                 ]
         ])
     }
 
-    def 'POST /sandbox/instance-type/{instanceType}, session is requested and requested session is returned'() {
+    def 'POST /sessions/instance-type/{instanceType}, session is requested and requested session is returned'() {
         def session = new WorkerSession(
                 id: 'some-session',
                 instance: new WorkerInstance(host: 'some-host'),
@@ -103,7 +106,7 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
                 state: PENDING
         )
         when:
-        post(path: "sandbox/instance-type/$session.instanceType")
+        post(path: "sessions/instance-type/$session.instanceType")
 
         then:
         1 * component.submit(new RequestSession(
@@ -114,14 +117,14 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
         status == 201
         sameJson(response.data, [
                 id: 'some-session',
-                path: 'sandbox/session/some-session',
+                path: 'sessions/session/some-session',
                 username: testUsername,
                 status: 'STARTING',
                 host: 'some-host'
         ])
     }
 
-    def 'POST /sandbox/session/{sessionId}, heartbeat is sent and session is returned'() {
+    def 'POST /sessions/session/{sessionId}, heartbeat is sent and session is returned'() {
         def session = new WorkerSession(
                 id: 'some-session',
                 instance: new WorkerInstance(host: 'some-host'),
@@ -129,7 +132,7 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
                 state: ACTIVE
         )
         when:
-        post(path: "sandbox/session/some-session")
+        post(path: "sessions/session/some-session")
 
         then:
         1 * component.submit(new Heartbeat(
@@ -139,16 +142,16 @@ class SandboxSessionEndpoint_Test extends AbstractComponentEndpointTest {
         status == 200
         sameJson(response.data, [
                 id: 'some-session',
-                path: "sandbox/session/some-session",
+                path: "sessions/session/some-session",
                 username: testUsername,
                 status: 'ACTIVE',
                 host: 'some-host'
         ])
     }
 
-    def 'DELETE /sandbox/session/{sessionId}, session is closed'() {
+    def 'DELETE /sessions/session/{sessionId}, session is closed'() {
         when:
-        delete(path: "sandbox/session/some-session")
+        delete(path: "sessions/session/some-session")
 
         then:
         1 * component.submit(new CloseSession(

@@ -26,29 +26,40 @@ import org.openforis.sepal.undertow.PatchedProxyHandler
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.xnio.OptionMap
+import org.xnio.Options
 import org.xnio.Xnio
 
 class RootHandler implements HttpHandler {
     private static final int SESSION_TIMEOUT = 30 * 60 // 30 minutes
+    private final String host
     private final int httpsPort
     private final String authenticationUrl
     private final String currentUserUrl
     private final String refreshGoogleAccessTokenUrl
-    private final PathHandler handler = Handlers.path()
+    private final PathHandler handler
     private final SessionManager sessionManager
 
     RootHandler(ProxyConfig config) {
+        this.host = config.host
         this.httpsPort = config.httpsPort
         this.authenticationUrl = config.authenticationUrl
         this.currentUserUrl = config.currentUserUrl
         this.refreshGoogleAccessTokenUrl = config.refreshGoogleAccessTokenUrl
         sessionManager = new InMemorySessionManager('sandbox-web-proxy', 4096, true)
         this.sessionManager.defaultSessionTimeout = SESSION_TIMEOUT
+        handler = Handlers.path()
         handler.addExactPath(config.logoutPath, LogoutHandler.create())
+        config.endpointConfigs.each { endpointConfig ->
+            endpointConfig.prefix ?
+                    handler.addPrefixPath(endpointConfig.path, pathHandler(endpointConfig)) :
+                    handler.addExactPath(endpointConfig.path, pathHandler(endpointConfig))
+        }
     }
 
-    RootHandler proxy(EndpointConfig endpointConfig) {
-        def endpointHandler = new LoggingProxyHandler(endpointConfig)
+    private HttpHandler pathHandler(EndpointConfig endpointConfig) {
+        if (!endpointConfig)
+            return null
+        def endpointHandler = new LoggingProxyHandler(endpointConfig, host)
         if (endpointConfig.rewriteRedirects)
             endpointHandler = new RedirectRewriteHandler(endpointHandler)
         if (endpointConfig.authenticate)
@@ -59,13 +70,9 @@ class RootHandler implements HttpHandler {
             endpointHandler = new CachedHandler(endpointHandler)
         if (endpointConfig.noCache)
             endpointHandler = new NoCacheHandler(endpointHandler)
-//        endpointHandler = gzipHandler(endpointHandler)
+        endpointHandler = gzipHandler(endpointHandler)
         def sessionConfig = new SessionCookieConfig(cookieName: "SEPAL-SESSIONID", secure: endpointConfig.https)
-        endpointHandler = new SessionAttachmentHandler(endpointHandler, sessionManager, sessionConfig)
-        endpointConfig.prefix ?
-                handler.addPrefixPath(endpointConfig.path, endpointHandler) :
-                handler.addExactPath(endpointConfig.path, endpointHandler)
-        return this
+        return new SessionAttachmentHandler(endpointHandler, sessionManager, sessionConfig)
     }
 
     private EncodingHandler gzipHandler(HttpHandler endpointHandler) {
@@ -143,24 +150,29 @@ class RootHandler implements HttpHandler {
         }
     }
 
-
     private static class LoggingProxyHandler implements HttpHandler {
         private final Logger LOG = LoggerFactory.getLogger(LoggingProxyHandler)
         private final HttpHandler proxyHandler
+        private final String host
         private final String target
 
-        LoggingProxyHandler(EndpointConfig endpointConfig) {
+        LoggingProxyHandler(EndpointConfig endpointConfig, String host) {
+            this.host = host
             target = endpointConfig.target.toString().replaceAll('/$', '') // Remove trailing slashes
             def sslContext = new SSLContextBuilder()
                     .loadTrustMaterial(null, new TrustSelfSignedStrategy())
                     .build()
-            def xnioSsl = new UndertowXnioSsl(Xnio.getInstance(), OptionMap.EMPTY, sslContext)
+            def options = OptionMap.builder()
+                .set(Options.WRITE_TIMEOUT, 60 * 1000)
+                .set(Options.KEEP_ALIVE, true)
+                .getMap()
+            def xnioSsl = new UndertowXnioSsl(Xnio.getInstance(), options, sslContext)
             def proxyClient = new LoadBalancingProxyClient(
                     maxQueueSize: 4096,
                     connectionsPerThread: 20,
                     softMaxConnectionsPerThread: 10
             )
-            proxyClient.addHost(URI.create(target), xnioSsl)
+            proxyClient.addHost(URI.create(target), null, xnioSsl, options)
             proxyClient.ttl = 30 * 1000
             proxyHandler = new PatchedProxyHandler(
                     proxyClient,
@@ -174,6 +186,11 @@ class RootHandler implements HttpHandler {
 
         void handleRequest(HttpServerExchange exchange) throws Exception {
             LOG.debug(exchange.toString())
+            exchange.responseHeaders.add(HttpString.tryFromString(
+                    'Content-Security-Policy'),
+                    "connect-src 'self' https://$host wss://$host https://*.googleapis.com https://apis.google.com;\n" +
+                            "frame-ancestors 'self' https://$host"
+            )
             exchange.addResponseCommitListener(new ResponseCommitListener() {
                 void beforeCommit(HttpServerExchange ex) {
                     if (LOG.traceEnabled) LOG.trace("Before response commit. statusCode: $ex.statusCode, exchange: $exchange")

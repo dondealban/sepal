@@ -1,10 +1,10 @@
 package org.openforis.sepal.component.datasearch.api
 
-import org.openforis.sepal.util.annotation.Data
+import groovy.transform.Canonical
 
-@Data
+@Canonical
 class AutomaticSceneSelectingMapQuery {
-    DataSet dataSet
+    String source
     Date fromDate
     Date toDate
     List<String> sensors

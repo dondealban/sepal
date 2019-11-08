@@ -8,8 +8,7 @@ import org.openforis.sepal.component.task.api.WorkerGateway
 import org.openforis.sepal.component.task.api.WorkerSessionManager
 import org.openforis.sepal.component.task.command.*
 import org.openforis.sepal.component.task.endpoint.TaskEndpoint
-import org.openforis.sepal.component.task.query.UserTasks
-import org.openforis.sepal.component.task.query.UserTasksHandler
+import org.openforis.sepal.component.task.query.*
 import org.openforis.sepal.component.workersession.WorkerSessionComponent
 import org.openforis.sepal.endpoint.EndpointRegistry
 import org.openforis.sepal.event.AsynchronousEventDispatcher
@@ -18,7 +17,7 @@ import org.openforis.sepal.sql.SqlConnectionManager
 import org.openforis.sepal.util.Clock
 import org.openforis.sepal.util.SystemClock
 
-import static java.util.concurrent.TimeUnit.SECONDS
+import static java.util.concurrent.TimeUnit.MINUTES
 
 class TaskComponent extends DataSourceBackedComponent implements EndpointRegistry {
     TaskComponent(
@@ -45,7 +44,7 @@ class TaskComponent extends DataSourceBackedComponent implements EndpointRegistr
 
         command(SubmitTask, new SubmitTaskHandler(taskRepository, sessionManager, workerGateway, clock))
         command(ResubmitTask, new ResubmitTaskHandler(taskRepository, sessionManager, workerGateway, clock))
-        command(ExecuteTasksInSession, new ExecuteTasksInSessionHandler(taskRepository, workerGateway))
+        command(ExecuteTasksInSession, new ExecuteTasksInSessionHandler(taskRepository, sessionManager, workerGateway))
         command(CancelTask, new CancelTaskHandler(taskRepository, sessionManager, workerGateway))
         command(CancelTimedOutTasks, new CancelTimedOutTasksHandler(taskRepository, sessionManager, workerGateway))
         command(CancelUserTasks, new CancelUserTasksHandler(taskRepository, sessionManager, workerGateway))
@@ -55,6 +54,7 @@ class TaskComponent extends DataSourceBackedComponent implements EndpointRegistr
         command(FailTasksInSession, new FailTasksInSessionHandler(taskRepository))
 
         query(UserTasks, new UserTasksHandler(taskRepository))
+        query(GetTask, new GetTaskHandler(taskRepository))
 
         sessionManager
                 .onSessionActivated { submit(new ExecuteTasksInSession(session: it)) }
@@ -66,6 +66,6 @@ class TaskComponent extends DataSourceBackedComponent implements EndpointRegistr
     }
 
     void onStart() {
-        schedule(10, SECONDS, new CancelTimedOutTasks())
+        schedule(1, MINUTES, new CancelTimedOutTasks())
     }
 }

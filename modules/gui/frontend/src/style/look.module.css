@@ -1,0 +1,401 @@
+.look {
+
+    /* default */
+
+    --look-default-color: hsla(0, 0%, 80%, 1);
+    --look-default-background-color: hsla(var(--look-default-h), var(--look-default-s), var(--look-default-l), var(--look-default-a));
+    --look-default-border-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 2%), var(--look-default-a));
+
+    --look-default-focus-color: hsla(0, 0%, 80%, 1);
+    --look-default-focus-background-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 3%), var(--look-default-a));
+    --look-default-focus-border-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 5%), var(--look-default-a));
+
+    --look-default-hover-color: hsla(0, 0%, 100%, 1);
+    --look-default-hover-background-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 5%), var(--look-default-a));
+    --look-default-hover-border-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 7%), var(--look-default-a));
+
+    --look-default-active-color: hsla(0, 0%, 100%, 1);
+    --look-default-active-background-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 3%), var(--look-default-a));
+    --look-default-active-border-color: hsla(var(--look-default-h), var(--look-default-s), calc(var(--look-default-l) + 5%), var(--look-default-a));
+
+    --look-default-disabled-color: hsla(0, 0%, 35%, 1);
+    --look-default-disabled-background-color: hsla(var(--look-default-h), calc(var(--look-default-s) * .3), calc(var(--look-default-l) * .8), var(--look-default-a));
+    --look-default-disabled-border-color: hsla(var(--look-default-h), calc(var(--look-default-s) * .3), calc(var(--look-default-l) * .8), var(--look-default-a));
+
+    /* highlight */
+
+    --look-highlight-color: hsla(0, 0%, 100%, 1);
+    --look-highlight-background-color: hsla(var(--look-highlight-h), var(--look-highlight-s), var(--look-highlight-l), var(--look-highlight-a));
+    --look-highlight-border-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) + 2%), var(--look-highlight-a));
+
+    --look-highlight-focus-color: hsla(0, 0%, 100%, 1);
+    --look-highlight-focus-background-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) - 2%), var(--look-highlight-a));
+    --look-highlight-focus-border-color: hsla(var(--look-highlight-h), var(--look-highlight-s), var(--look-highlight-l), var(--look-highlight-a));
+
+    --look-highlight-hover-color: hsla(0, 0%, 100%, 1);
+    --look-highlight-hover-background-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) + 3%), var(--look-highlight-a));
+    --look-highlight-hover-border-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) + 5%), var(--look-highlight-a));
+
+    --look-highlight-active-color: hsla(0, 0%, 100%, 1);
+    --look-highlight-active-background-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) + 0%), var(--look-highlight-a));
+    --look-highlight-active-border-color: hsla(var(--look-highlight-h), var(--look-highlight-s), calc(var(--look-highlight-l) - 2%), var(--look-highlight-a));
+
+    --look-highlight-disabled-color: hsla(0, 0%, 60%, 1);
+    --look-highlight-disabled-background-color: hsla(var(--look-highlight-h), calc(var(--look-highlight-s) * .3), calc(var(--look-highlight-l) * .8), var(--look-highlight-a));
+    --look-highlight-disabled-border-color: hsla(var(--look-highlight-h), calc(var(--look-highlight-s) * .3), calc(var(--look-highlight-l) * .8), var(--look-highlight-a));
+
+    /* selected */
+
+    --look-selected-color: hsla(0, 0%, 100%, 1);
+    --look-selected-background-color: hsla(var(--look-selected-h), var(--look-selected-s), var(--look-selected-l), var(--look-selected-a));
+    --look-selected-border-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) + 2%), var(--look-selected-a));
+
+    --look-selected-focus-color: hsla(0, 0%, 100%, 1);
+    --look-selected-focus-background-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) - 2%), var(--look-selected-a));
+    --look-selected-focus-border-color: hsla(var(--look-selected-h), var(--look-selected-s), var(--look-selected-l), var(--look-selected-a));
+
+    --look-selected-hover-color: hsla(0, 0%, 100%, 1);
+    --look-selected-hover-background-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) + 3%), var(--look-selected-a));
+    --look-selected-hover-border-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) + 5%), var(--look-selected-a));
+
+    --look-selected-active-color: hsla(0, 0%, 100%, 1);
+    --look-selected-active-background-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) + 0%), var(--look-selected-a));
+    --look-selected-active-border-color: hsla(var(--look-selected-h), var(--look-selected-s), calc(var(--look-selected-l) - 2%), var(--look-selected-a));
+
+    --look-selected-disabled-color: hsla(0, 0%, 60%, 1);
+    --look-selected-disabled-background-color: hsla(var(--look-selected-h), calc(var(--look-selected-s) * .3), calc(var(--look-selected-l) * .8), var(--look-selected-a));
+    --look-selected-disabled-border-color: hsla(var(--look-selected-h), calc(var(--look-selected-s) * .3), calc(var(--look-selected-l) * .8), var(--look-selected-a));
+
+    /* transparent */
+
+    --look-transparent-color: hsla(0, 0%, 70%, 1);
+    --look-transparent-background-color: hsla(var(--look-transparent-h), var(--look-transparent-s), var(--look-transparent-l), var(--look-transparent-a));
+    --look-transparent-border-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 2%), var(--look-transparent-a));
+
+    --look-transparent-focus-color: hsla(0, 0%, 80%, 1);
+    --look-transparent-focus-background-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 3%), var(--look-transparent-a));
+    --look-transparent-focus-border-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 5%), var(--look-transparent-a));
+
+    --look-transparent-hover-color: hsla(0, 0%, 100%, 1);
+    --look-transparent-hover-background-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 5%), var(--look-transparent-a));
+    --look-transparent-hover-border-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 7%), var(--look-transparent-a));
+
+    --look-transparent-active-color: hsla(0, 0%, 100%, 1);
+    --look-transparent-active-background-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 3%), var(--look-transparent-a));
+    --look-transparent-active-border-color: hsla(var(--look-transparent-h), var(--look-transparent-s), calc(var(--look-transparent-l) + 5%), var(--look-transparent-a));
+
+    --look-transparent-disabled-color: hsla(0, 0%, 35%, 1);
+    --look-transparent-disabled-background-color: hsla(var(--look-transparent-h), calc(var(--look-transparent-s) * .5), calc(var(--look-transparent-l) * .9), var(--look-transparent-a));
+    --look-transparent-disabled-border-color: hsla(var(--look-transparent-h), calc(var(--look-transparent-s) * .5), calc(var(--look-transparent-l) * .9), var(--look-transparent-a));
+
+    /* add */
+
+    --look-add-color: hsla(0, 0%, 100%, 1);
+    --look-add-background-color: hsla(var(--look-add-h), var(--look-add-s), var(--look-add-l), var(--look-add-a));
+    --look-add-border-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) + 2%), var(--look-add-a));
+
+    --look-add-focus-color: hsla(0, 0%, 100%, 1);
+    --look-add-focus-background-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) - 2%), var(--look-add-a));
+    --look-add-focus-border-color: hsla(var(--look-add-h), var(--look-add-s), var(--look-add-l), var(--look-add-a));
+
+    --look-add-hover-color: hsla(0, 0%, 100%, 1);
+    --look-add-hover-background-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) + 3%), var(--look-add-a));
+    --look-add-hover-border-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) + 5%), var(--look-add-a));
+
+    --look-add-active-color: hsla(0, 0%, 100%, 1);
+    --look-add-active-background-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) + 0%), var(--look-add-a));
+    --look-add-active-border-color: hsla(var(--look-add-h), var(--look-add-s), calc(var(--look-add-l) - 2%), var(--look-add-a));
+
+    --look-add-disabled-color: var(--look-default-disabled-color);
+    --look-add-disabled-background-color: var(--look-default-disabled-background-color);
+    --look-add-disabled-border-color: var(--look-default-disabled-border-color);
+
+    /* apply */
+
+    --look-apply-color: hsla(0, 0%, 100%, 1);
+    --look-apply-background-color: hsla(var(--look-apply-h), var(--look-apply-s), var(--look-apply-l), var(--look-apply-a));
+    --look-apply-border-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) + 2%), var(--look-apply-a));
+
+    --look-apply-focus-color: hsla(0, 0%, 100%, 1);
+    --look-apply-focus-background-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) - 2%), var(--look-apply-a));
+    --look-apply-focus-border-color: hsla(var(--look-apply-h), var(--look-apply-s), var(--look-apply-l), var(--look-apply-a));
+
+    --look-apply-hover-color: hsla(0, 0%, 100%, 1);
+    --look-apply-hover-background-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) + 3%), var(--look-apply-a));
+    --look-apply-hover-border-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) + 5%), var(--look-apply-a));
+
+    --look-apply-active-color: hsla(0, 0%, 100%, 1);
+    --look-apply-active-background-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) + 0%), var(--look-apply-a));
+    --look-apply-active-border-color: hsla(var(--look-apply-h), var(--look-apply-s), calc(var(--look-apply-l) - 2%), var(--look-apply-a));
+
+    --look-apply-disabled-color: hsla(0, 0%, 50%, 1);
+    --look-apply-disabled-background-color: hsla(var(--look-apply-h), calc(var(--look-apply-s) * .5), calc(var(--look-apply-l) * .6), var(--look-apply-a));
+    --look-apply-disabled-border-color: hsla(var(--look-apply-h), calc(var(--look-apply-s) * .5), calc(var(--look-apply-l) * .6), var(--look-apply-a));
+
+    /* cancel */
+
+    --look-cancel-color: hsla(0, 0%, 100%, 1);
+    --look-cancel-background-color: hsla(var(--look-cancel-h), var(--look-cancel-s), var(--look-cancel-l), var(--look-cancel-a));
+    --look-cancel-border-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) + 2%), var(--look-cancel-a));
+
+    --look-cancel-focus-color: hsla(0, 0%, 100%, 1);
+    --look-cancel-focus-background-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) - 2%), var(--look-cancel-a));
+    --look-cancel-focus-border-color: hsla(var(--look-cancel-h), var(--look-cancel-s), var(--look-cancel-l), var(--look-cancel-a));
+
+    --look-cancel-hover-color: hsla(0, 0%, 100%, 1);
+    --look-cancel-hover-background-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) + 3%), var(--look-cancel-a));
+    --look-cancel-hover-border-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) + 5%), var(--look-cancel-a));
+
+    --look-cancel-active-color: hsla(0, 0%, 100%, 1);
+    --look-cancel-active-background-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) + 0%), var(--look-cancel-a));
+    --look-cancel-active-border-color: hsla(var(--look-cancel-h), var(--look-cancel-s), calc(var(--look-cancel-l) - 2%), var(--look-cancel-a));
+
+    --look-cancel-disabled-color: var(--look-default-disabled-color);
+    --look-cancel-disabled-background-color: var(--look-default-disabled-background-color);
+    --look-cancel-disabled-border-color: var(--look-default-disabled-border-color);
+
+    /* global */
+
+    transition: all 100ms ease-in-out;
+    border: 1px solid transparent;
+}
+
+.look {
+    cursor: pointer;
+}
+
+.look.noTransitions {
+    transition: none;
+}
+
+/* chromeless */
+
+.look.chromeless {
+    color: var(--look-default-color);
+    background-color: transparent;
+    border-color: transparent !important;
+}
+
+/* disabled */
+
+.look:disabled,
+.look.nonInteractive {
+    cursor: default;
+    pointer-events: none;
+}
+
+.look.nonInteractive > * {
+    pointer-events: all;
+}
+
+/* default */
+
+.look.default:not(.chromeless) {
+    color: var(--look-default-color);
+    background-color: var(--look-default-background-color);
+    border-color: var(--look-default-border-color);
+}
+
+.look.default:not(:disabled):not(.nonInteractive).hover,
+.look.default:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-default-hover-color);
+    background-color: var(--look-default-hover-background-color);
+    border-color: var(--look-default-hover-border-color);
+}
+
+.look.default:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-default-active-color);
+    background-color: var(--look-default-active-background-color);
+    border-color: var(--look-default-active-border-color);
+}
+
+.look.default:disabled {
+    color: var(--look-default-disabled-color);
+}
+
+.look.default:not(.chromeless):disabled {
+    background-color: var(--look-default-disabled-background-color);
+    border-color: var(--look-default-disabled-border-color);
+}
+
+/* transparent */
+
+.look.transparent:not(.chromeless) {
+    color: var(--look-transparent-color);
+    background-color: var(--look-transparent-background-color);
+    border-color: var(--look-transparent-border-color);
+}
+
+.look.transparent:not(:disabled):not(.nonInteractive).hover,
+.look.transparent:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-transparent-hover-color);
+    background-color: var(--look-transparent-hover-background-color);
+    border-color: var(--look-transparent-hover-border-color);
+}
+
+.look.transparent:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-transparent-active-color);
+    background-color: var(--look-transparent-active-background-color);
+    border-color: var(--look-transparent-active-border-color);
+}
+
+.look.transparent:disabled {
+    color: var(--look-transparent-disabled-color);
+}
+
+.look.transparent:not(.chromeless):disabled {
+    background-color: var(--look-transparent-disabled-background-color);
+    border-color: var(--look-transparent-disabled-border-color);
+}
+
+/* highlight */
+
+.look.highlight:not(.chromeless) {
+    color: var(--look-highlight-color);
+    background-color: var(--look-highlight-background-color);
+    border-color: var(--look-highlight-border-color);
+}
+
+.look.highlight:not(:disabled):not(.nonInteractive).hover,
+.look.highlight:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-highlight-hover-color);
+    background-color: var(--look-highlight-hover-background-color);
+    border-color: var(--look-highlight-hover-border-color);
+}
+
+.look.highlight:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-highlight-active-color);
+    background-color: var(--look-highlight-active-background-color);
+    border-color: var(--look-highlight-active-border-color);
+}
+
+.look.highlight:disabled {
+    color: var(--look-highlight-disabled-color);
+}
+
+.look.highlight:not(.chromeless):disabled {
+    background-color: var(--look-highlight-disabled-background-color);
+    border-color: var(--look-highlight-disabled-border-color);
+}
+
+/* selected */
+
+.look.selected:not(.chromeless) {
+    color: var(--look-selected-color);
+    background-color: var(--look-selected-background-color);
+    border-color: var(--look-selected-border-color);
+}
+
+.look.selected:not(:disabled):not(.nonInteractive).hover,
+.look.selected:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-selected-hover-color);
+    background-color: var(--look-selected-hover-background-color);
+    border-color: var(--look-selected-hover-border-color);
+}
+
+.look.selected:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-selected-active-color);
+    background-color: var(--look-selected-active-background-color);
+    border-color: var(--look-selected-active-border-color);
+}
+
+.look.selected:disabled {
+    color: var(--look-selected-disabled-color);
+}
+
+.look.selected:not(.chromeless):disabled {
+    background-color: var(--look-selected-disabled-background-color);
+    border-color: var(--look-selected-disabled-border-color);
+}
+
+/* add */
+
+.look.add:not(.chromeless) {
+    color: var(--look-add-color);
+    background-color: var(--look-add-background-color);
+    border-color: var(--look-add-border-color);
+}
+
+.look.add:not(:disabled):not(.nonInteractive).hover,
+.look.add:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-add-hover-color);
+    background-color: var(--look-add-hover-background-color);
+    border-color: var(--look-add-hover-border-color);
+}
+
+.look.add:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-add-active-color);
+    background-color: var(--look-add-active-background-color);
+    border-color: var(--look-add-active-border-color);
+}
+
+.look.add:disabled {
+    color: var(--look-add-disabled-color);
+}
+
+.look.add:not(.chromeless):disabled {
+    background-color: var(--look-add-disabled-background-color);
+    border-color: var(--look-add-disabled-border-color);
+}
+
+/* apply */
+
+.look.apply:not(.chromeless) {
+    color: var(--look-apply-color);
+    background-color: var(--look-apply-background-color);
+    border-color: var(--look-apply-border-color);
+}
+
+.look.apply:not(:disabled):not(.nonInteractive).hover,
+.look.apply:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-apply-hover-color);
+    background-color: var(--look-apply-hover-background-color);
+    border-color: var(--look-apply-hover-border-color);
+}
+
+.look.apply:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-apply-active-color);
+    background-color: var(--look-apply-active-background-color);
+    border-color: var(--look-apply-active-border-color);
+}
+
+.look.apply:disabled {
+    color: var(--look-apply-disabled-color);
+    background-color: var(--look-apply-disabled-background-color);
+    border-color: var(--look-apply-disabled-border-color);
+}
+
+.look.apply:not(.chromeless):disabled {
+    background-color: var(--look-apply-disabled-background-color);
+    border-color: var(--look-apply-disabled-border-color);
+}
+
+/* cancel */
+
+.look.cancel:not(.chromeless) {
+    color: var(--look-cancel-color);
+    background-color: var(--look-cancel-background-color);
+    border-color: var(--look-cancel-border-color);
+}
+
+.look.cancel:not(:disabled):not(.nonInteractive).hover,
+.look.cancel:not(:disabled):not(.nonInteractive):not(.noHover):hover {
+    color: var(--look-cancel-hover-color);
+    background-color: var(--look-cancel-hover-background-color);
+    border-color: var(--look-cancel-hover-border-color);
+}
+
+.look.cancel:not(:disabled):not(.nonInteractive):not(.chromeless):not(.noHover):active {
+    color: var(--look-cancel-active-color);
+    background-color: var(--look-cancel-active-background-color);
+    border-color: var(--look-cancel-active-border-color);
+}
+
+.look.cancel:disabled {
+    color: var(--look-cancel-disabled-color);
+}
+
+.look.cancel:not(.chromeless):disabled {
+    background-color: var(--look-cancel-disabled-background-color);
+    border-color: var(--look-cancel-disabled-border-color);
+}

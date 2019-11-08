@@ -9,13 +9,14 @@ import org.openforis.sepal.component.task.query.UserTasks
 import util.AbstractComponentEndpointTest
 
 import static groovy.json.JsonOutput.toJson
+import static groovyx.net.http.ContentType.JSON
 import static org.openforis.sepal.security.Roles.TASK_EXECUTOR
 
 @SuppressWarnings("GroovyAssignabilityCheck")
 class TaskEndpoint_Test extends AbstractComponentEndpointTest {
     void registerEndpoint(Controller controller) {
         new TaskEndpoint(component)
-                .registerWith(controller)
+            .registerWith(controller)
     }
 
     def 'Given no tasks, GET /tasks, queries UserTasks and returns empty array'() {
@@ -27,7 +28,7 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
         sameJson(response.data, [])
     }
 
-    def 'Given a task, GET /tasks, queries UserTasks returns empty array'() {
+    def 'Given a task, GET /tasks, queries UserTasks returns the task'() {
         def task = task()
         when:
         def response = get(path: 'tasks')
@@ -38,31 +39,32 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
         1 * component.submit(new UserTasks(username: testUsername)) >> [task]
 
         sameJson(response.data, [
-                [
-                        id               : task.id,
-                        name             : task.operation,
-                        status           : task.state.name(),
-                        statusDescription: task.statusDescription
-                ]])
+            [
+                id: task.id,
+                recipeId: null,
+                name: task.operation,
+                status: task.state.name(),
+                statusDescription: task.statusDescription
+            ]])
     }
 
     def 'POST /tasks, submits SubmitTask'() {
-        def query = [
-                instanceType: 'some-instance-type',
-                operation   : 'some-operation',
-                params      : toJson(some: 'params'),
-                username    : testUsername
+        def body = [
+            instanceType: 'some-instance-type',
+            operation: 'some-operation',
+            params: toJson(some: 'params'),
+            username: testUsername
         ]
         when:
-        post(path: 'tasks', query: query)
+        post(path: 'tasks', body: body, contentType: JSON)
 
         then:
-        status == 204
+        status == 200
         1 * component.submit(new SubmitTask(
-                instanceType: query.instanceType,
-                operation: query.operation,
-                params: fromJson(query.params),
-                username: query.username
+            instanceType: body.instanceType,
+            operation: body.operation,
+            params: fromJson(body.params),
+            username: body.username
         ))
     }
 
@@ -98,8 +100,8 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
         then:
         status == 204
         1 * component.submit(new ResubmitTask(
-                taskId: taskId,
-                username: testUsername))
+            taskId: taskId,
+            username: testUsername))
     }
 
     def 'POST /tasks/remove, submits RemoveUserTasks'() {
@@ -115,9 +117,9 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
         inRole(TASK_EXECUTOR)
         def taskId = 123
         def query = [
-                instanceType     : 'some-instance-type',
-                state            : 'PENDING',
-                statusDescription: 'some-status-description'
+            instanceType: 'some-instance-type',
+            state: 'PENDING',
+            statusDescription: 'some-status-description'
         ]
 
 
@@ -127,18 +129,18 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
         then:
         status == 204
         1 * component.submit(new UpdateTaskProgress(
-                taskId: taskId,
-                state: query.state as Task.State,
-                statusDescription: query.statusDescription,
-                username: testUsername))
+            taskId: taskId,
+            state: query.state as Task.State,
+            statusDescription: query.statusDescription,
+            username: testUsername))
     }
 
     def 'Given not TASK_EXECUTOR, POST /tasks/task/{id}/state-updated, return 403'() {
         def taskId = 123
         def query = [
-                instanceType     : 'some-instance-type',
-                state            : 'PENDING',
-                statusDescription: 'some-status-description'
+            instanceType: 'some-instance-type',
+            state: 'PENDING',
+            statusDescription: 'some-status-description'
         ]
 
 
@@ -151,15 +153,15 @@ class TaskEndpoint_Test extends AbstractComponentEndpointTest {
 
     Task task() {
         new Task(
-                id: 'some-task-id',
-                state: Task.State.ACTIVE,
-                username: testUsername,
-                operation: 'some-operation',
-                params: [some: 'parameters'],
-                sessionId: 'some-session-id',
-                statusDescription: 'some-status-description',
-                creationTime: new Date(),
-                updateTime: new Date()
+            id: 'some-task-id',
+            state: Task.State.ACTIVE,
+            username: testUsername,
+            operation: 'some-operation',
+            params: [some: 'parameters'],
+            sessionId: 'some-session-id',
+            statusDescription: 'some-status-description',
+            creationTime: new Date(),
+            updateTime: new Date()
 
         )
     }

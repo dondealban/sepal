@@ -1,0 +1,8 @@
+.scrollable {
+    flex-grow: 1;
+}
+
+.nonScrollable {
+    flex-shrink: 1;
+    overflow: hidden;
+}

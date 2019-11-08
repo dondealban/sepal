@@ -1,0 +1,170 @@
+.container {
+    position: relative;
+    width: 100%;
+    height: 6rem;
+    padding: 5rem 5rem 2.5rem 5rem;
+    font-family: "Source Sans Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.disabled {
+    position: absolute;
+    top: -2px;
+    right: -5rem;
+    bottom: 0;
+    left: -5rem;
+    background-color: hsla(36, 8%, 15%, .7);
+    pointer-events: none;
+    z-index: 2;
+}
+
+.axisReference {
+    width: 100%;
+    height: 1px;
+    position: relative
+}
+
+.axis {
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    background-color: rgb(222, 222, 222);
+    opacity: 0.32;
+}
+
+.ticks > * {
+    position: absolute;
+    background-color: rgb(222, 222, 222);
+    opacity: 0.32;
+    width: 1px;
+    top: -0.5rem;
+    bottom: -0.5rem;
+}
+
+.tick {
+    --left: 0;
+    left: calc(var(--left) * 1px);
+}
+
+@media (max-width: 500px) {
+    .ticks {
+        display: none;
+    }
+    .months {
+        display: none;
+    }
+}
+
+.months > * {
+    position: absolute;
+    top: 1rem;
+    text-align: center;
+    user-select: none;
+}
+
+.month {
+    --left: 0;
+    --width: 0;
+    left: calc(var(--left) * 1px);
+    width: calc(var(--width) * 1px);
+}
+
+.centerMarker {
+    position: absolute;
+    left: 50%;
+    width: 1px;
+    bottom: -0.5rem;
+    height: 4rem;
+    background-color: var(--look-highlight-background-color);
+    z-index: 1;
+}
+
+.centerMarker > .label {
+    position: absolute;
+    bottom: 4rem;
+    width: 5rem;
+    left: calc(-2.5rem);
+    text-align: center;
+    background-color: var(--look-highlight-background-color);
+    border: 1px solid var(--look-highlight-border-color);
+    border-radius: 1rem;
+}
+
+.label {
+    margin: auto;
+    width: max-content;
+}
+
+.selectedRange {
+    position: absolute;
+    bottom: -1px;
+    height: 3px;
+    background-color: var(--look-highlight-background-color);
+}
+
+.handle {
+    position: absolute;
+    cursor: ew-resize;
+    top: -1.5rem;
+    bottom: 0;
+    width: 1px;
+    background-color: rgba(222, 222, 222, 0.32);
+}
+
+.handleGrabArea {
+    position: absolute;
+    border-radius: 50%;
+    top: -0.5rem;
+    bottom: -0.5rem;
+    left: -1rem;
+    width: 2rem;
+    z-index: 1;
+}
+
+.flag {
+    position: absolute;
+    bottom: 1.5rem;
+    width: 5rem;
+    background-color: rgb(60, 60, 60);
+    border: 1px solid rgba(222, 222, 222, 0.32);
+}
+
+.leftFlag {
+    right: 0;
+    border-top-left-radius: 1rem;
+    border-bottom-left-radius: 1rem;
+    border-top-right-radius: 1rem;
+}
+
+.rightFlag {
+    left: 0;
+    border-top-right-radius: 1rem;
+    border-bottom-right-radius: 1rem;
+    border-top-left-radius: 1rem;
+}
+
+.increase {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    right: 0;
+    cursor: e-resize;
+}
+
+.decrease {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 50%;
+    cursor: w-resize;
+}
+
+.datePickers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+}

@@ -1,0 +1,108 @@
+.container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    z-index: 2;
+    padding: .5rem;
+    overflow: hidden;
+}
+
+.notification {
+    --error-color: hsl(0, 60%, 40%);
+    --info-color: hsl(202, 60%, 40%);
+    --warning-color: hsl(39, 60%, 40%);
+    --success-color: hsl(90, 60%, 35%);
+    --background-opacity: .85;
+    position: relative;
+    width: 20rem;
+    pointer-events: all;
+    background-color: hsla(0, 0%, 0%, var(--background-opacity));
+    border-style: solid;
+    border-width: .5rem .1rem .1rem .1rem;
+    border-color: var(--color);
+    border-radius: var(--container-border-radius);
+    overflow: hidden;
+    word-wrap: break-word;
+}
+
+.notification:not(.dismissing) {
+    animation: add 250ms ease-in-out normal forwards;
+}
+
+@keyframes add {
+    0% {
+        transform: translateX(50%);
+        opacity: 0;
+    }
+}
+
+.notification.dismissing {
+    animation: remove 250ms ease-in-out reverse forwards;
+}
+
+@keyframes remove {
+    0% {
+        transform: translateX(50%);
+        opacity: 0;
+    }
+}
+
+.notification:not(:first-child) {
+    margin-top: .5rem;
+}
+
+.notification.success {
+    --color: var(--success-color);
+}
+
+.notification.info {
+    --color: var(--info-color);
+}
+
+.notification.warning {
+    --color: var(--warning-color);
+}
+
+.notification.error {
+    --color: var(--error-color);
+}
+
+.notification.dismissable:hover {
+    --background-opacity: .9;
+    cursor: pointer;
+}
+
+.notification .dismiss {
+    text-align: center;
+    font-size: .8rem;
+    color: gray;
+}
+
+.notification .title {
+    color: var(--color);
+    font-weight: bold;
+}
+
+.notification .message {
+    color: #ccc;
+}
+
+.notification .error {
+    color: #ccc;
+    font-size: .9rem;
+}
+
+.notification .content {
+    color: #ccc;
+    padding: .5rem 0;
+}
+
+.notification > * {
+    margin: .5rem .8rem;
+}
